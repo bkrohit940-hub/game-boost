@@ -145,3 +145,5 @@ Distributed under the Apache License 2.0. See [`LICENSE`](file:///d:/projects/ap
 
 * GameBoost is an independent open-source utility and is **not** affiliated with, endorsed by, or sponsored by Tencent, KRAFTON, Level Infinite, or VNG Corporation.
 * Shizuku is developed and copyrighted by Rikka and contributors under the Apache 2.0 License.
+#   g a m e - b o o s t  
+ 
