@@ -92,7 +92,7 @@ fun GameBoostLogo(
     sizeDp: Dp = 32.dp
 ) {
     Image(
-        painter = painterResource(id = R.drawable.ic_game_boost_logo),
+        painter = painterResource(id = R.drawable.ic_game_boost_emblem),
         contentDescription = "Game Boost Logo",
         modifier = modifier.size(sizeDp)
     )

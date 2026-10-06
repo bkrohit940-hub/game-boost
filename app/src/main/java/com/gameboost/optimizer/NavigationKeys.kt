@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SettingsKey : NavKey
 
 // Flow & Subscreens
+@Serializable data object StartupKey : NavKey
 @Serializable data object FirstLaunchKey : NavKey
 @Serializable data object ShizukuSetupKey : NavKey
 @Serializable data class GameDetailKey(val gameId: String) : NavKey

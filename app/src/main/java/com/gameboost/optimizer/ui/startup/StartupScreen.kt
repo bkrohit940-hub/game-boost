@@ -1,0 +1,137 @@
+package com.gameboost.optimizer.ui.startup
+
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.gameboost.optimizer.R
+import com.gameboost.optimizer.theme.BorderSubtle
+import com.gameboost.optimizer.theme.DarkBg
+import com.gameboost.optimizer.theme.SurfaceElevated
+import com.gameboost.optimizer.theme.TextPrimary
+import com.gameboost.optimizer.theme.TextSecondary
+import kotlinx.coroutines.delay
+
+/**
+ * Clean, fast, professional startup screen.
+ * Displays the creator's profile picture with authentic branding:
+ * [PROFILE PICTURE]
+ * Game Boost
+ * Created by Rohit B.K
+ *
+ * Designed with a subtle, fast entrance animation that never delays app startup unnecessarily.
+ */
+@Composable
+fun StartupScreen(
+    onFinished: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val alphaAnim = remember { Animatable(0f) }
+    val scaleAnim = remember { Animatable(0.95f) }
+
+    LaunchedEffect(Unit) {
+        // Fast, subtle entrance animation (350ms)
+        alphaAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
+        )
+        scaleAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
+        )
+
+        // Hold briefly for clean professional branding (~850ms)
+        delay(850)
+
+        // Smooth transition out
+        alphaAnim.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+        )
+
+        onFinished()
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(DarkBg),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .graphicsLayer {
+                    alpha = alphaAnim.value
+                    scaleX = scaleAnim.value
+                    scaleY = scaleAnim.value
+                }
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // [PROFILE PICTURE] - Personal profile picture exactly as provided
+            Box(
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceElevated)
+                    .border(1.5.dp, BorderSubtle, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.creator_profile),
+                    contentDescription = "Creator Profile",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Game Boost app name
+            Text(
+                text = "Game Boost",
+                color = TextPrimary,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Exact creator credit: Created by Rohit B.K
+            Text(
+                text = "Created by Rohit B.K",
+                color = TextSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.5.sp
+            )
+        }
+    }
+}

@@ -24,6 +24,7 @@ import com.gameboost.optimizer.ui.games.GameDetailScreen
 import com.gameboost.optimizer.ui.games.GamesScreen
 import com.gameboost.optimizer.ui.permission.ShizukuSetupScreen
 import com.gameboost.optimizer.ui.settings.SettingsScreen
+import com.gameboost.optimizer.ui.startup.StartupScreen
 
 @Composable
 fun MainNavigation(
@@ -41,14 +42,8 @@ fun MainNavigation(
     val selectedMode by viewModel.selectedMode.collectAsState()
     val isBoosting by viewModel.isBoosting.collectAsState()
 
-    // Initial destination: if first run completed -> HomeKey; else FirstLaunchKey
-    val initialKey = if (!userPrefs.isFirstRunCompleted) {
-        FirstLaunchKey
-    } else {
-        HomeKey
-    }
-
-    val backStack = rememberNavBackStack(initialKey)
+    // Clean, fast startup branding: starts with StartupKey
+    val backStack = rememberNavBackStack(StartupKey)
     val currentKey = backStack.lastOrNull() ?: HomeKey
 
     val isTopLevelDestination = currentKey is HomeKey ||
@@ -82,6 +77,19 @@ fun MainNavigation(
                 backStack = backStack,
                 onBack = { backStack.removeLastOrNull() },
                 entryProvider = entryProvider {
+                    entry<StartupKey> {
+                        StartupScreen(
+                            onFinished = {
+                                backStack.clear()
+                                if (!userPrefs.isFirstRunCompleted) {
+                                    backStack.add(FirstLaunchKey)
+                                } else {
+                                    backStack.add(HomeKey)
+                                }
+                            }
+                        )
+                    }
+
                     entry<FirstLaunchKey> {
                         FirstLaunchScreen(
                             capabilities = viewModel.capabilities,
