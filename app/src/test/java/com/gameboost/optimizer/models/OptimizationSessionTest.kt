@@ -18,7 +18,7 @@ class OptimizationSessionTest {
         val session = OptimizationSession(
             gamePackage = "com.tencent.ig",
             gameName = "PUBG Mobile",
-            selectedProfile = OptimizationProfile(type = OptimizationProfileType.PERFORMANCE),
+            selectedProfile = OptimizationProfile(mode = PerformanceMode.PERFORMANCE),
             requestedRefreshRate = 120f,
             originalSettings = baseline,
             modifiedSettings = listOf("peak_refresh_rate: 120.0", "window_animation_scale: 0.5"),
@@ -48,7 +48,7 @@ class OptimizationSessionTest {
         val session = OptimizationSession(
             gamePackage = "com.tencent.ig",
             gameName = "PUBG Mobile",
-            selectedProfile = OptimizationProfile(type = OptimizationProfileType.PERFORMANCE),
+            selectedProfile = OptimizationProfile(mode = PerformanceMode.PERFORMANCE),
             requestedRefreshRate = 120f,
             originalSettings = baseline,
             verificationResult = OptimizationResult(

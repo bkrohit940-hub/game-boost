@@ -5,17 +5,18 @@ import android.os.Build
 import android.util.Log
 import com.gameboost.optimizer.models.DisplayStateBackup
 import com.gameboost.optimizer.models.OptimizationProfile
-import com.gameboost.optimizer.models.OptimizationProfileType
+import com.gameboost.optimizer.models.PerformanceMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Handles legitimate Android performance and system configuration
- * via safe, allowlisted Shizuku operations.
+ * Handles legitimate Android performance, game mode, memory trimming,
+ * and system configuration via safe, allowlisted Shizuku operations.
  */
 class PerformanceController(
     private val context: Context,
-    private val shizukuManager: ShizukuManager
+    private val shizukuManager: ShizukuManager,
+    val memoryOptimizer: MemoryOptimizer = MemoryOptimizer(context, shizukuManager)
 ) {
     companion object {
         private const val TAG = "PerformanceController"
@@ -35,10 +36,11 @@ class PerformanceController(
 
         // 1. Animation Scale Optimization
         if (profile.optimizeAnimations) {
-            val scale = when (profile.type) {
-                OptimizationProfileType.BALANCED -> "1.0"
-                OptimizationProfileType.PERFORMANCE -> "0.5"
-                OptimizationProfileType.EXTREME -> "0.0"
+            val scale = when (profile.mode) {
+                PerformanceMode.SAFE -> "1.0"
+                PerformanceMode.PERFORMANCE -> "0.5"
+                PerformanceMode.AGGRESSIVE,
+                PerformanceMode.THERMAL_OVERRIDE -> "0.0"
             }
 
             val curWin = shizukuManager.executeCommand("settings get global window_animation_scale").getOrNull()?.trim()
@@ -60,10 +62,11 @@ class PerformanceController(
         // 2. Android 12+ Game Mode API
         if (profile.setGameModePerformance && !targetPackageName.isNullOrEmpty() && Build.VERSION.SDK_INT >= 31) {
             if (CommandAllowlist.validatePackageName(targetPackageName)) {
-                val modeArg = when (profile.type) {
-                    OptimizationProfileType.BALANCED -> "standard"
-                    OptimizationProfileType.PERFORMANCE,
-                    OptimizationProfileType.EXTREME -> "performance"
+                val modeArg = when (profile.mode) {
+                    PerformanceMode.SAFE -> "standard"
+                    PerformanceMode.PERFORMANCE,
+                    PerformanceMode.AGGRESSIVE,
+                    PerformanceMode.THERMAL_OVERRIDE -> "performance"
                 }
 
                 val cmd = "cmd game mode $modeArg $targetPackageName"
@@ -75,6 +78,37 @@ class PerformanceController(
                 }
             } else {
                 failed.add("Invalid package name for Game Mode API")
+            }
+        }
+
+        // 3. Legitimate Gaming Memory Optimization
+        if (profile.optimizeMemory) {
+            try {
+                val memResult = memoryOptimizer.optimizeMemory(targetPackageName, profile.mode)
+                if (memResult.optimizedPackages.isNotEmpty()) {
+                    applied.add("Memory optimization: trimmed ${memResult.optimizedPackages.size} background apps (${memResult.formattedRamAvailable} available)")
+                } else {
+                    applied.add("Memory optimization: ${memResult.statusMessage}")
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Memory optimization error", e)
+                failed.add("Background memory optimization skipped: ${e.message}")
+            }
+        }
+
+        // 4. Thermal Override Mode (EXPERIMENTAL & STRICTLY SAFEGUARDED)
+        if (profile.mode == PerformanceMode.THERMAL_OVERRIDE) {
+            if (!profile.thermalOverrideConfirmed) {
+                failed.add("Thermal override blocked: Requires explicit user warning confirmation")
+            } else {
+                // Use only legitimate, allowlisted power command to signal sustained gaming
+                val thermalCmd = "cmd power set-mode 0"
+                val res = shizukuManager.executeCommand(thermalCmd)
+                if (res.isSuccess) {
+                    applied.add("Thermal override: Sustained power mode signaled (Hardware limits remain active)")
+                } else {
+                    failed.add("Thermal control unsupported on this device")
+                }
             }
         }
 

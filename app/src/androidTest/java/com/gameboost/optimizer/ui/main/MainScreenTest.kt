@@ -3,24 +3,29 @@ package com.gameboost.optimizer.ui.main
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import com.gameboost.optimizer.theme.GameBoostTheme
+import com.gameboost.optimizer.ui.components.BadgeState
+import com.gameboost.optimizer.ui.components.StatusBadge
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** UI tests for [com.gameboost.optimizer.ui.main.MainScreen]. */
+/** UI tests for Game Boost components. */
 class MainScreenTest {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   @Before
   fun setup() {
-    composeTestRule.setContent { MainScreen(FAKE_DATA) }
+    composeTestRule.setContent {
+      GameBoostTheme {
+        StatusBadge(text = "BOOST READY", state = BadgeState.SUCCESS)
+      }
+    }
   }
 
   @Test
-  fun firstItem_exists() {
-    FAKE_DATA.forEach { composeTestRule.onNodeWithText("Hello $it!").assertExists() }
+  fun testStatusBadgeExists() {
+    composeTestRule.onNodeWithText("BOOST READY").assertExists()
   }
 }
-
-private val FAKE_DATA = listOf("Sample1", "Sample2", "Sample3")

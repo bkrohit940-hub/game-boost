@@ -107,6 +107,15 @@ class ShizukuManager(
         }
     }
 
+    var wasPreviouslyAuthorized: Boolean = false
+
+    fun setPreviouslyAuthorized(authorized: Boolean) {
+        if (authorized && !wasPreviouslyAuthorized) {
+            wasPreviouslyAuthorized = true
+            refreshStatus()
+        }
+    }
+
     fun getStatus(): ShizukuStatus {
         val installed = isInstalled()
         val running = isRunning()
@@ -120,6 +129,9 @@ class ShizukuManager(
                 version = Shizuku.getVersion()
                 uid = Shizuku.getUid()
                 authorized = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+                if (authorized) {
+                    wasPreviouslyAuthorized = true
+                }
             } catch (e: Throwable) {
                 error = e.localizedMessage
                 Log.e(TAG, "Error querying Shizuku metadata", e)
@@ -130,6 +142,7 @@ class ShizukuManager(
             isInstalled = installed,
             isRunning = running,
             isAuthorized = authorized,
+            wasPreviouslyAuthorized = wasPreviouslyAuthorized,
             version = version,
             uid = uid,
             errorMessage = error

@@ -43,10 +43,19 @@ object CommandAllowlist {
         Pattern.compile("^cmd game mode (standard|performance|battery) [a-zA-Z0-9_.]+$"),
         Pattern.compile("^cmd game mode [a-zA-Z0-9_.]+$"),
 
+        // Memory optimization commands (non-destructive trim memory for eligible background workloads)
+        Pattern.compile("^am trim-memory [a-zA-Z0-9_.]+ (RUNNING_MODERATE|RUNNING_LOW|RUNNING_CRITICAL|COMPLETE|MODERATE|HIDDEN)$"),
+        Pattern.compile("^cmd activity trim-memory [a-zA-Z0-9_.]+ (RUNNING_MODERATE|RUNNING_LOW|RUNNING_CRITICAL|COMPLETE|MODERATE|HIDDEN)$"),
+
+        // Verified Power & Performance mode commands
+        Pattern.compile("^cmd power set-mode [0-1]$"),
+
         // Inspection / Diagnostics commands
         Pattern.compile("^dumpsys display | grep -E \"(mSupportedModes|mBaseDisplayInfo|mOverrideDisplayInfo)\"$"),
         Pattern.compile("^dumpsys power | grep -E \"mPowerSaveModeEnabled\"$"),
-        Pattern.compile("^dumpsys activity top | grep ACTIVITY$")
+        Pattern.compile("^dumpsys activity top | grep ACTIVITY$"),
+        Pattern.compile("^dumpsys thermalservice$"),
+        Pattern.compile("^dumpsys battery$")
     )
 
     fun isAllowed(command: String): Boolean {

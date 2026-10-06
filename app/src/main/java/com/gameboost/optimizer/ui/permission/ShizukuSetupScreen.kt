@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,26 +35,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gameboost.optimizer.models.ShizukuState
 import com.gameboost.optimizer.models.ShizukuStatus
 import com.gameboost.optimizer.system.ShizukuManager
-import com.gameboost.optimizer.theme.CardBorder
-import com.gameboost.optimizer.theme.CardNavy
-import com.gameboost.optimizer.theme.CardNavyElevated
-import com.gameboost.optimizer.theme.CyberCyan
-import com.gameboost.optimizer.theme.NeonGreen
-import com.gameboost.optimizer.theme.NeonRed
-import com.gameboost.optimizer.theme.ObsidianBg
-import com.gameboost.optimizer.theme.TextGray
-import com.gameboost.optimizer.theme.TextMuted
-import com.gameboost.optimizer.theme.TextWhite
+import com.gameboost.optimizer.theme.AccentPrimary
+import com.gameboost.optimizer.theme.BorderSubtle
+import com.gameboost.optimizer.theme.DarkBg
+import com.gameboost.optimizer.theme.StatusDanger
+import com.gameboost.optimizer.theme.StatusReady
+import com.gameboost.optimizer.theme.StatusWarning
+import com.gameboost.optimizer.theme.SurfaceCard
+import com.gameboost.optimizer.theme.SurfaceElevated
+import com.gameboost.optimizer.theme.TextPrimary
+import com.gameboost.optimizer.theme.TextSecondary
+import com.gameboost.optimizer.theme.TextTertiary
+import com.gameboost.optimizer.ui.components.BadgeState
+import com.gameboost.optimizer.ui.components.GameBoostLogo
 import com.gameboost.optimizer.ui.components.GlassCard
+import com.gameboost.optimizer.ui.components.StatusBadge
 
 @Composable
 fun ShizukuSetupScreen(
@@ -71,7 +71,7 @@ fun ShizukuSetupScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ObsidianBg
+        color = DarkBg
     ) {
         Column(
             modifier = Modifier
@@ -79,7 +79,7 @@ fun ShizukuSetupScreen(
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Navigation Top Bar
             Row(
@@ -91,13 +91,13 @@ fun ShizukuSetupScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = TextWhite
+                        tint = TextPrimary
                     )
                 }
 
                 Text(
                     text = "SHIZUKU SETUP",
-                    color = TextWhite,
+                    color = TextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -107,142 +107,184 @@ fun ShizukuSetupScreen(
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh",
-                        tint = CyberCyan
+                        tint = AccentPrimary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Security Explanation
-            GlassCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Security,
-                        contentDescription = null,
-                        tint = CyberCyan,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Why GameBoost uses Shizuku",
-                        color = TextWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+            // Current State Card
+            GlassCard(
+                backgroundColor = SurfaceElevated,
+                border = BorderStroke(
+                    1.dp,
+                    if (status.isReady) StatusReady else StatusWarning.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = status.title,
+                            color = if (status.isReady) StatusReady else StatusWarning,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = status.summaryText,
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    StatusBadge(
+                        text = if (status.isReady) "READY" else "ACTION REQUIRED",
+                        state = if (status.isReady) BadgeState.SUCCESS else BadgeState.WARNING
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
-                    text = "Android protects display refresh-rate controls from ordinary unprivileged apps. Shizuku enables user-authorized ADB permissions without root or bootloader unlocking, so GameBoost can lock the 120Hz display safely.",
-                    color = TextGray,
+                    text = status.actionPrompt,
+                    color = TextPrimary,
                     fontSize = 12.sp,
-                    lineHeight = 17.sp
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Step-by-Step Instructions based on active state
+            GlassCard(backgroundColor = SurfaceElevated) {
+                Text(
+                    text = "SETUP GUIDE",
+                    color = TextTertiary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SetupStepItem(
+                    stepNumber = "1",
+                    title = "Install Shizuku",
+                    description = "Install the official Shizuku application from GitHub or Google Play Store.",
+                    isCompleted = status.isInstalled
+                )
+
+                SetupStepItem(
+                    stepNumber = "2",
+                    title = "Start Shizuku Service",
+                    description = "Open Shizuku and start the service via Wireless Debugging (Android 11+) or ADB over USB.",
+                    isCompleted = status.isRunning
+                )
+
+                SetupStepItem(
+                    stepNumber = "3",
+                    title = "Authorize Game Boost",
+                    description = "Grant Game Boost permission to adjust display modes and legitimate performance settings.",
+                    isCompleted = status.isAuthorized
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Step 1: Install
-            StepCard(
-                stepNumber = 1,
-                title = "Install Shizuku",
-                description = if (status.isInstalled) "Shizuku application is installed on your device." else "Shizuku is required to apply elevated display settings without root.",
-                isCompleted = status.isInstalled,
-                actionButton = if (!status.isInstalled) {
-                    {
-                        Button(
-                            onClick = { openPlayStoreOrBrowser(context, ShizukuManager.SHIZUKU_PACKAGE) },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CyberCyan, contentColor = ObsidianBg)
-                        ) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("GET SHIZUKU", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
+            // Action Buttons
+            when (status.state) {
+                ShizukuState.SHIZUKU_READY -> {
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusReady, contentColor = DarkBg),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("CONTINUE TO GAME BOOST", fontWeight = FontWeight.Bold)
                     }
-                } else null
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Step 2: Running
-            StepCard(
-                stepNumber = 2,
-                title = "Start Shizuku Service",
-                description = if (status.isRunning) "Shizuku service is running." else "Launch the Shizuku app and start it using Wireless Debugging (Android 11+) or computer ADB.",
-                isCompleted = status.isRunning,
-                actionButton = if (status.isInstalled && !status.isRunning) {
-                    {
-                        OutlinedButton(
-                            onClick = { launchShizukuApp(context) },
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, CyberCyan)
-                        ) {
-                            Text("OPEN SHIZUKU", color = CyberCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                } else null
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Step 3: Grant Permission
-            StepCard(
-                stepNumber = 3,
-                title = "Grant GameBoost Permission",
-                description = if (status.isAuthorized) "GameBoost is authorized! Shizuku remembers this state for future launches." else "Allow GameBoost in Shizuku's authorization prompt.",
-                isCompleted = status.isAuthorized,
-                actionButton = if (status.isRunning && !status.isAuthorized) {
-                    {
-                        Button(
-                            onClick = onRequestPermission,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CyberCyan, contentColor = ObsidianBg)
-                        ) {
-                            Text("GRANT PERMISSION", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                } else null
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // Bottom Action
-            if (status.isAuthorized) {
-                Button(
-                    onClick = onContinue,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonGreen,
-                        contentColor = ObsidianBg
-                    )
-                ) {
-                    Text(
-                        text = "CONTINUE TO DASHBOARD",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
                 }
-            } else {
-                OutlinedButton(
-                    onClick = onContinue,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, CardBorder)
-                ) {
-                    Text(
-                        text = "CONTINUE IN READ-ONLY MODE",
-                        color = TextGray,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+
+                ShizukuState.PERMISSION_REQUIRED,
+                ShizukuState.PERMISSION_REVOKED -> {
+                    Button(
+                        onClick = onRequestPermission,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Security, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (status.state == ShizukuState.PERMISSION_REVOKED) "RE-AUTHORIZE PERMISSION" else "AUTHORIZE SHIZUKU",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+
+                ShizukuState.SHIZUKU_NOT_RUNNING -> {
+                    Button(
+                        onClick = {
+                            val intent = context.packageManager.getLaunchIntentForPackage(ShizukuManager.SHIZUKU_PACKAGE)
+                            if (intent != null) {
+                                context.startActivity(intent)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("OPEN SHIZUKU APP", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                ShizukuState.SHIZUKU_UNAVAILABLE -> {
+                    Button(
+                        onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/RikkaApps/Shizuku/releases")
+                            )
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("DOWNLOAD SHIZUKU", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = onContinue,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("CONTINUE ANYWAY (LIMITED MODE)", fontSize = 11.sp)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -251,112 +293,59 @@ fun ShizukuSetupScreen(
 }
 
 @Composable
-private fun StepCard(
-    stepNumber: Int,
+private fun SetupStepItem(
+    stepNumber: String,
     title: String,
     description: String,
-    isCompleted: Boolean,
-    actionButton: (@Composable () -> Unit)? = null
+    isCompleted: Boolean
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = CardNavy,
-        border = BorderStroke(1.dp, if (isCompleted) NeonGreen.copy(alpha = 0.4f) else CardBorder)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(if (isCompleted) NeonGreen else CardNavyElevated),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isCompleted) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = ObsidianBg,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        } else {
-                            Text(
-                                text = "$stepNumber",
-                                color = TextWhite,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+        Surface(
+            modifier = Modifier.size(24.dp),
+            shape = RoundedCornerShape(6.dp),
+            color = if (isCompleted) StatusReady.copy(alpha = 0.15f) else SurfaceCard,
+            border = BorderStroke(1.dp, if (isCompleted) StatusReady else BorderSubtle)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (isCompleted) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = StatusReady,
+                        modifier = Modifier.size(14.dp)
+                    )
+                } else {
                     Text(
-                        text = title,
-                        color = TextWhite,
-                        fontSize = 14.sp,
+                        text = stepNumber,
+                        color = TextSecondary,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
-
-                if (isCompleted) {
-                    Text(
-                        text = "COMPLETED",
-                        color = NeonGreen,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
+        Column {
+            Text(
+                text = title,
+                color = if (isCompleted) TextPrimary else TextSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                color = TextGray,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                modifier = Modifier.padding(start = 40.dp)
+                color = TextTertiary,
+                fontSize = 11.sp,
+                lineHeight = 15.sp
             )
-
-            if (actionButton != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 40.dp)
-                ) {
-                    actionButton()
-                }
-            }
         }
-    }
-}
-
-private fun launchShizukuApp(context: Context) {
-    try {
-        val intent = context.packageManager.getLaunchIntentForPackage(ShizukuManager.SHIZUKU_PACKAGE)
-        if (intent != null) {
-            context.startActivity(intent)
-        }
-    } catch (_: Throwable) {}
-}
-
-private fun openPlayStoreOrBrowser(context: Context, packageName: String) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    } catch (_: Throwable) {
-        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(browserIntent)
     }
 }

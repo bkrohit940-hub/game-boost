@@ -2,11 +2,8 @@ package com.gameboost.optimizer.ui.firstlaunch
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,12 +17,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -37,25 +33,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gameboost.optimizer.models.DeviceCapabilities
 import com.gameboost.optimizer.models.ShizukuStatus
-import com.gameboost.optimizer.theme.CardBorder
-import com.gameboost.optimizer.theme.CardNavy
-import com.gameboost.optimizer.theme.CardNavyElevated
-import com.gameboost.optimizer.theme.CyberCyan
-import com.gameboost.optimizer.theme.ElectricPurple
-import com.gameboost.optimizer.theme.NeonGreen
-import com.gameboost.optimizer.theme.ObsidianBg
-import com.gameboost.optimizer.theme.TextGray
-import com.gameboost.optimizer.theme.TextMuted
-import com.gameboost.optimizer.theme.TextWhite
+import com.gameboost.optimizer.theme.AccentPrimary
+import com.gameboost.optimizer.theme.BorderSubtle
+import com.gameboost.optimizer.theme.DarkBg
+import com.gameboost.optimizer.theme.StatusReady
+import com.gameboost.optimizer.theme.StatusWarning
+import com.gameboost.optimizer.theme.SurfaceElevated
+import com.gameboost.optimizer.theme.TextPrimary
+import com.gameboost.optimizer.theme.TextSecondary
+import com.gameboost.optimizer.theme.TextTertiary
 import com.gameboost.optimizer.ui.components.BadgeState
+import com.gameboost.optimizer.ui.components.GameBoostLogo
 import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.StatusBadge
 
@@ -71,7 +65,7 @@ fun FirstLaunchScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ObsidianBg
+        color = DarkBg
     ) {
         Column(
             modifier = Modifier
@@ -82,38 +76,23 @@ fun FirstLaunchScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Brand Header
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(
-                        brush = Brush.linearGradient(listOf(CyberCyan, ElectricPurple)),
-                        shape = RoundedCornerShape(18.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Speed,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
+            // Brand Header with clean emblem
+            GameBoostLogo(sizeDp = 64.dp)
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "GAMEBOOST",
-                color = TextWhite,
-                fontSize = 28.sp,
+                text = "GAME BOOST",
+                color = TextPrimary,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp
+                letterSpacing = 1.5.sp
             )
-
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Gaming Performance Optimizer",
-                color = CyberCyan,
-                fontSize = 14.sp,
+                text = "Performance Center",
+                color = AccentPrimary,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.5.sp
             )
@@ -121,170 +100,109 @@ fun FirstLaunchScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Optimize your Android device for PUBG Mobile, BGMI, and Korean PUBG with genuine 120Hz display locking.",
-                color = TextGray,
-                fontSize = 13.sp,
+                text = "Professional Android gaming launcher and performance optimizer for competitive battle royale titles.",
+                color = TextSecondary,
+                fontSize = 12.sp,
                 textAlign = TextAlign.Center,
-                lineHeight = 18.sp,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             if (!hasStartedScan) {
-                // Value Propositions
-                GlassCard {
-                    FeatureCheckRow("120Hz display optimization where supported")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FeatureCheckRow("Legitimate Android & Shizuku system control")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FeatureCheckRow("Automatic PUBG / BGMI package detection")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FeatureCheckRow("One-time authorization (remembered state)")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FeatureCheckRow("Reversible session backup & auto-restore")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FeatureCheckRow("No APK/OBB hacking, no anti-cheat tampering")
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Button(
-                    onClick = { hasStartedScan = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CyberCyan,
-                        contentColor = ObsidianBg
-                    )
-                ) {
+                GlassCard(backgroundColor = SurfaceElevated) {
                     Text(
-                        text = "GET STARTED",
-                        fontSize = 15.sp,
+                        text = "DEVICE INITIALIZATION",
+                        color = TextTertiary,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        letterSpacing = 0.5.sp
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Game Boost will inspect your display panel refresh rates, SoC hardware, and Shizuku authorization state.",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { hasStartedScan = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("SCAN DEVICE CAPABILITIES", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             } else {
-                // Animated Device Capability Scan Results
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn() + slideInVertically()
-                ) {
+                AnimatedVisibility(visible = true, enter = fadeIn()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        GlassCard {
+                        GlassCard(backgroundColor = SurfaceElevated) {
                             Text(
-                                text = "DEVICE HARDWARE SCAN",
-                                color = CyberCyan,
-                                fontSize = 12.sp,
+                                text = "HARDWARE SCAN RESULTS",
+                                color = TextTertiary,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            ScanDetailRow("Device", "${capabilities.manufacturer} ${capabilities.model}")
-                            ScanDetailRow("Android OS", "Android ${capabilities.androidVersion} (API ${capabilities.apiLevel})")
-                            ScanDetailRow("OEM Environment", capabilities.oemSkin)
-                            ScanDetailRow("CPU / SoC", "${capabilities.socHardware} (${capabilities.cpuCores} cores)")
-                            ScanDetailRow("Total RAM", capabilities.formattedRam)
-
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 12.dp),
-                                color = CardBorder
-                            )
-
-                            Text(
-                                text = "DISPLAY CAPABILITIES",
-                                color = CyberCyan,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
+                                letterSpacing = 0.5.sp
                             )
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            ScanDetailRow("Current Refresh Rate", "${capabilities.displayState.currentRefreshRate.toInt()}Hz")
-                            ScanDetailRow("Maximum Refresh Rate", "${capabilities.displayState.maxRefreshRate.toInt()}Hz")
-                            ScanDetailRow(
-                                "120Hz Support",
-                                if (capabilities.displayState.supports120Hz) "Hardware Supported ✓" else "Not Supported on Panel ✕"
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Device", color = TextSecondary, fontSize = 12.sp)
+                                Text("${capabilities.brand} ${capabilities.model}", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
 
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 12.dp),
-                                color = CardBorder
-                            )
+                            Spacer(modifier = Modifier.height(6.dp))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Column {
-                                    Text(
-                                        text = "SHIZUKU PRIVILEGED API",
-                                        color = CyberCyan,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = if (shizukuStatus.isAuthorized) "Authorization active" else "Requires one-time permission",
-                                        color = TextMuted,
-                                        fontSize = 12.sp
-                                    )
-                                }
+                                Text("Display Panel", color = TextSecondary, fontSize = 12.sp)
+                                Text("${capabilities.displayState.maxRefreshRate.toInt()}Hz Max", color = AccentPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
 
-                                val badgeState = when {
-                                    shizukuStatus.isAuthorized -> BadgeState.SUCCESS
-                                    shizukuStatus.isRunning -> BadgeState.WARNING
-                                    else -> BadgeState.ERROR
-                                }
-                                StatusBadge(text = shizukuStatus.summaryText, state = badgeState)
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("System Memory", color = TextSecondary, fontSize = 12.sp)
+                                Text(capabilities.formattedRam, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Shizuku Status", color = TextSecondary, fontSize = 12.sp)
+                                StatusBadge(
+                                    text = if (shizukuStatus.isReady) "READY" else "NOT READY",
+                                    state = if (shizukuStatus.isReady) BadgeState.SUCCESS else BadgeState.WARNING
+                                )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                        if (shizukuStatus.isAuthorized) {
-                            Button(
-                                onClick = onContinueToDashboard,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(54.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = NeonGreen,
-                                    contentColor = ObsidianBg
-                                )
-                            ) {
-                                Text(
-                                    text = "CONTINUE TO DASHBOARD",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        } else {
+                        if (!shizukuStatus.isReady) {
                             Button(
                                 onClick = onContinueToShizuku,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(54.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CyberCyan,
-                                    contentColor = ObsidianBg
-                                )
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                                shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text(
-                                    text = "SET UP SHIZUKU",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
+                                Text("CONFIGURE SHIZUKU (RECOMMENDED)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -293,68 +211,29 @@ fun FirstLaunchScreen(
                                 onClick = onContinueToDashboard,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.dp, CardBorder)
+                                    .height(44.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text(
-                                    text = "CONTINUE WITHOUT SHIZUKU (READ-ONLY)",
-                                    color = TextGray,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Text("SKIP TO PERFORMANCE CENTER", fontSize = 11.sp)
+                            }
+                        } else {
+                            Button(
+                                onClick = onContinueToDashboard,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StatusReady, contentColor = DarkBg),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("ENTER GAME BOOST", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
-    }
-}
-
-@Composable
-private fun FeatureCheckRow(text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = null,
-            tint = NeonGreen,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = text,
-            color = TextWhite,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun ScanDetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            color = TextGray,
-            fontSize = 13.sp
-        )
-        Text(
-            text = value,
-            color = TextWhite,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }

@@ -18,10 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -37,15 +38,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gameboost.optimizer.data.datastore.AppUserPreferences
 import com.gameboost.optimizer.models.ShizukuStatus
-import com.gameboost.optimizer.theme.CardBorder
-import com.gameboost.optimizer.theme.CardNavy
-import com.gameboost.optimizer.theme.CyberAmber
-import com.gameboost.optimizer.theme.CyberCyan
-import com.gameboost.optimizer.theme.NeonGreen
-import com.gameboost.optimizer.theme.ObsidianBg
-import com.gameboost.optimizer.theme.TextGray
-import com.gameboost.optimizer.theme.TextMuted
-import com.gameboost.optimizer.theme.TextWhite
+import com.gameboost.optimizer.theme.AccentPrimary
+import com.gameboost.optimizer.theme.BorderSubtle
+import com.gameboost.optimizer.theme.DarkBg
+import com.gameboost.optimizer.theme.StatusReady
+import com.gameboost.optimizer.theme.StatusWarning
+import com.gameboost.optimizer.theme.SurfaceElevated
+import com.gameboost.optimizer.theme.TextPrimary
+import com.gameboost.optimizer.theme.TextSecondary
+import com.gameboost.optimizer.theme.TextTertiary
 import com.gameboost.optimizer.ui.components.BadgeState
 import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.SectionHeader
@@ -59,12 +60,13 @@ fun SettingsScreen(
     onToggleRestoreOnExit: (Boolean) -> Unit,
     onRecheckShizuku: () -> Unit,
     onOpenShizukuSetup: () -> Unit,
+    onRestoreDefault: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ObsidianBg
+        color = DarkBg
     ) {
         Column(
             modifier = Modifier
@@ -81,14 +83,14 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = TextWhite
+                        tint = TextPrimary
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "SETTINGS",
-                    color = TextWhite,
-                    fontSize = 18.sp,
+                    color = TextPrimary,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
@@ -96,62 +98,70 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CRITICAL: Honest FPS vs 120Hz Educational Section (Section 18)
-            GlassCard(
-                border = BorderStroke(1.dp, CyberAmber.copy(alpha = 0.5f))
-            ) {
+            // Honest Technical Educational Section
+            GlassCard(backgroundColor = SurfaceElevated) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = CyberAmber,
-                        modifier = Modifier.size(24.dp)
+                        tint = AccentPrimary,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "IMPORTANT: 120Hz vs 120 FPS",
-                        color = TextWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "HONEST PERFORMANCE DISCLOSURE",
+                        color = AccentPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "• 120Hz = Display panel refreshes up to 120 times per second.\n\n" +
-                            "• 120 FPS = Game engine actively renders up to 120 frames per second.\n\n" +
-                            "• 120Hz display does not automatically mean PUBG is rendering at 120 FPS.\n\n" +
-                            "• GameBoost optimizes the device's display configuration and supported system settings, but it cannot guarantee a game's internal FPS mode.",
-                    color = TextGray,
+                    text = "Game Boost configures Android display compositor modes and system performance states. " +
+                            "Physical display refresh rates (e.g. 120Hz) reduce input latency and motion judder, " +
+                            "but actual in-game frame rate (FPS) is determined by the game developer's engine and device GPU rendering capacity. " +
+                            "Game Boost never claims fabricated FPS numbers.",
+                    color = TextSecondary,
                     fontSize = 12.sp,
-                    lineHeight = 18.sp
+                    lineHeight = 17.sp
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Automation Settings
-            SectionHeader(title = "Background Automation")
-
-            GlassCard {
+            // Automation & Restore Toggles
+            SectionHeader(title = "Automation & Reversibility")
+            GlassCard(backgroundColor = SurfaceElevated) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Auto Game Optimization", color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "Automatically apply 120Hz when PUBG/BGMI launches", color = TextMuted, fontSize = 11.sp)
+                        Text(
+                            text = "Auto-Boost On Launch",
+                            color = TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Automatically apply optimizations when supported games are launched",
+                            color = TextTertiary,
+                            fontSize = 11.sp
+                        )
                     }
                     Switch(
                         checked = userPreferences.isAutoBoostEnabled,
                         onCheckedChange = onToggleAutoBoost,
-                        colors = SwitchDefaults.colors(checkedThumbColor = ObsidianBg, checkedTrackColor = CyberCyan)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = DarkBg,
+                            checkedTrackColor = AccentPrimary
+                        )
                     )
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = CardBorder)
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -159,41 +169,73 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Auto-Restore on Exit", color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "Revert display rate and animation scales when game exits", color = TextMuted, fontSize = 11.sp)
+                        Text(
+                            text = "Restore Baseline On Exit",
+                            color = TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Revert display rates and animation scales when gaming session ends",
+                            color = TextTertiary,
+                            fontSize = 11.sp
+                        )
                     }
                     Switch(
                         checked = userPreferences.isRestoreOnExitEnabled,
                         onCheckedChange = onToggleRestoreOnExit,
-                        colors = SwitchDefaults.colors(checkedThumbColor = ObsidianBg, checkedTrackColor = CyberCyan)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = DarkBg,
+                            checkedTrackColor = AccentPrimary
+                        )
                     )
+                }
+
+                if (onRestoreDefault != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = onRestoreDefault,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restore,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("RESTORE SYSTEM DEFAULTS NOW", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Shizuku Service Management
-            SectionHeader(title = "Shizuku Service & Authorization")
-
-            GlassCard {
+            SectionHeader(title = "Privileged Service")
+            GlassCard(backgroundColor = SurfaceElevated) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(text = "Authorization State", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (shizukuStatus.isAuthorized) "Authorized (v${shizukuStatus.version})" else "Not Authorized",
-                            color = if (shizukuStatus.isAuthorized) NeonGreen else CyberAmber,
-                            fontSize = 14.sp,
+                            text = shizukuStatus.title,
+                            color = if (shizukuStatus.isReady) StatusReady else StatusWarning,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = shizukuStatus.summaryText,
+                            color = TextSecondary,
+                            fontSize = 11.sp
                         )
                     }
                     StatusBadge(
-                        text = if (shizukuStatus.isAuthorized) "ACTIVE" else "REQUIRED",
-                        state = if (shizukuStatus.isAuthorized) BadgeState.SUCCESS else BadgeState.WARNING
+                        text = if (shizukuStatus.isReady) "READY" else "ATTENTION",
+                        state = if (shizukuStatus.isReady) BadgeState.SUCCESS else BadgeState.WARNING
                     )
                 }
 
@@ -206,22 +248,24 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = onRecheckShizuku,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, CardBorder)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = TextWhite, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("RECHECK", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("RECHECK", fontSize = 11.sp)
                     }
 
                     Button(
                         onClick = onOpenShizukuSetup,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberCyan, contentColor = ObsidianBg)
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Security, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
                         Text("SETUP GUIDE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -229,15 +273,35 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // App Info
-            GlassCard {
-                Text(text = "GameBoost v1.0", color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
+            // Security & Anti-Cheat Boundary
+            SectionHeader(title = "Safety & Compliance")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = StatusReady,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "SECURITY GUARANTEE",
+                        color = StatusReady,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Built strictly around legitimate Android public APIs and Shizuku. No root exploits, no game binary tampering, no anti-cheat bypasses.",
-                    color = TextMuted,
+                    text = "• Zero game file tampering (APK, OBB, or assets are never modified)\n" +
+                            "• Zero memory injection or network interception\n" +
+                            "• 100% compliant with PUBG/BGMI Fair Play & Anti-Cheat\n" +
+                            "• All shell operations strictly restricted to security allowlist\n" +
+                            "• Hardware thermal safety protections are strictly respected",
+                    color = TextSecondary,
                     fontSize = 11.sp,
-                    lineHeight = 15.sp
+                    lineHeight = 16.sp
                 )
             }
 

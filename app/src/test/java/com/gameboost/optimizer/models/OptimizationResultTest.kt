@@ -1,5 +1,6 @@
 package com.gameboost.optimizer.models
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -43,18 +44,22 @@ class OptimizationResultTest {
     fun testShizukuStatusSummary() {
         val notInstalled = ShizukuStatus(isInstalled = false)
         assertFalse(notInstalled.isReady)
-        assertTrue(notInstalled.summaryText.contains("Not Installed"))
+        assertEquals("SHIZUKU UNAVAILABLE", notInstalled.title)
+        assertTrue(notInstalled.summaryText.contains("not installed", ignoreCase = true))
 
         val stopped = ShizukuStatus(isInstalled = true, isRunning = false)
         assertFalse(stopped.isReady)
-        assertTrue(stopped.summaryText.contains("Service Stopped"))
+        assertEquals("SHIZUKU NOT RUNNING", stopped.title)
+        assertTrue(stopped.summaryText.contains("stopped", ignoreCase = true))
 
         val notAuth = ShizukuStatus(isInstalled = true, isRunning = true, isAuthorized = false)
         assertFalse(notAuth.isReady)
-        assertTrue(notAuth.summaryText.contains("Permission Required"))
+        assertEquals("PERMISSION REQUIRED", notAuth.title)
+        assertTrue(notAuth.summaryText.contains("Permission", ignoreCase = true))
 
         val ready = ShizukuStatus(isInstalled = true, isRunning = true, isAuthorized = true, version = 13)
         assertTrue(ready.isReady)
-        assertTrue(ready.summaryText.contains("Authorized (v13)"))
+        assertEquals("SHIZUKU READY", ready.title)
+        assertTrue(ready.summaryText.contains("Authorized", ignoreCase = true))
     }
 }

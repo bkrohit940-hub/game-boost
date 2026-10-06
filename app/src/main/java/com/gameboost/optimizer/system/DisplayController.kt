@@ -102,10 +102,15 @@ class DisplayController(
         )
     }
 
+    fun getHighestSupportedRefreshRate(): Float {
+        return getDisplayCapabilities().highestRefreshRate
+    }
+
     /**
      * Applies target refresh rate using safe, allowlisted system commands.
+     * When targetRate <= 0f, automatically detects and applies the highest supported display mode.
      */
-    suspend fun applyRefreshRate(targetRate: Float): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+    suspend fun applyRefreshRate(targetRate: Float = 0f): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         if (!shizukuManager.hasPermission()) {
             return@withContext Pair(false, "Shizuku authorization required to configure display rate")
         }
@@ -128,7 +133,7 @@ class DisplayController(
         shizukuManager.executeCommand("settings put global min_refresh_rate $effectiveRate")
 
         // 3. For OEM ROMs that use secure user_refresh_rate (e.g., ColorOS/RealmeUI)
-        if (effectiveRate.toInt() == 120 || effectiveRate.toInt() == 90 || effectiveRate.toInt() == 60) {
+        if (effectiveRate.toInt() == 144 || effectiveRate.toInt() == 120 || effectiveRate.toInt() == 90 || effectiveRate.toInt() == 60) {
             shizukuManager.executeCommand("settings put secure user_refresh_rate ${effectiveRate.toInt()}")
         }
 
@@ -140,13 +145,11 @@ class DisplayController(
         val verified = Math.abs(updatedState.currentRefreshRate - effectiveRate) < 1.5f
 
         if (verified) {
-            Pair(true, "Display switched to ${updatedState.currentRefreshRate.toInt()}Hz successfully")
+            Pair(true, "Display switched to ${updatedState.currentRefreshRate.toInt()}Hz (${updatedState.currentRefreshRate.toInt()}Hz panel verified)")
         } else {
-            val actual = updatedState.currentRefreshRate.toInt()
             Pair(
                 false,
-                "Device/system refused ${effectiveRate.toInt()}Hz (active: ${actual}Hz). " +
-                        "Android did not accept the requested display mode. This may be restricted by the device, firmware, game, or power mode."
+                "Display control restricted by device/OEM"
             )
         }
     }

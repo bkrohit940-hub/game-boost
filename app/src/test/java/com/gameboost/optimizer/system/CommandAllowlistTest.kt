@@ -29,15 +29,22 @@ class CommandAllowlistTest {
     }
 
     @Test
-    fun testAllowedGameModeCommands() {
-        assertTrue(CommandAllowlist.isAllowed("cmd game mode performance com.tencent.ig"))
-        assertTrue(CommandAllowlist.isAllowed("cmd game mode standard com.pubg.imobile"))
-        assertTrue(CommandAllowlist.isAllowed("cmd game mode battery com.pubg.krmobile"))
-        assertTrue(CommandAllowlist.isAllowed("cmd game mode com.tencent.ig"))
+    fun testAllowedMemoryAndPowerCommands() {
+        assertTrue(CommandAllowlist.isAllowed("am trim-memory com.example.social RUNNING_MODERATE"))
+        assertTrue(CommandAllowlist.isAllowed("am trim-memory com.example.browser COMPLETE"))
+        assertTrue(CommandAllowlist.isAllowed("cmd activity trim-memory com.example.app RUNNING_LOW"))
+        assertTrue(CommandAllowlist.isAllowed("cmd power set-mode 0"))
+        assertTrue(CommandAllowlist.isAllowed("cmd power set-mode 1"))
+        assertTrue(CommandAllowlist.isAllowed("dumpsys thermalservice"))
+        assertTrue(CommandAllowlist.isAllowed("dumpsys battery"))
     }
 
     @Test
     fun testRejectsDangerousOrArbitraryCommands() {
+        // Kernel modifications or arbitrary sysfs tampering
+        assertFalse(CommandAllowlist.isAllowed("echo 0 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"))
+        assertFalse(CommandAllowlist.isAllowed("echo 0 > /sys/class/thermal/thermal_zone0/mode"))
+        assertFalse(CommandAllowlist.isAllowed("killall com.android.systemui"))
         // Arbitrary shell commands
         assertFalse(CommandAllowlist.isAllowed("rm -rf /"))
         assertFalse(CommandAllowlist.isAllowed("su"))

@@ -60,8 +60,24 @@ class OptimizationRepository(
         return hardwareMonitor.monitorFlow()
     }
 
+    fun getPackageIcon(packageName: String): android.graphics.drawable.Drawable? {
+        return packageDetector.getApplicationIcon(packageName)
+    }
+
+    fun launchGame(packageName: String): Boolean {
+        return packageDetector.launchPackage(packageName)
+    }
+
     suspend fun applyOptimization(gameProfile: GameProfile, profile: OptimizationProfile): OptimizationResult {
         return optimizationEngine.applyOptimization(gameProfile, profile)
+    }
+
+    suspend fun boostAndPlay(gameProfile: GameProfile, profile: OptimizationProfile): Pair<OptimizationResult, Boolean> {
+        val result = applyOptimization(gameProfile, profile)
+        val launched = if (gameProfile.isInstalled && gameProfile.installedPackageName != null) {
+            launchGame(gameProfile.installedPackageName)
+        } else false
+        return Pair(result, launched)
     }
 
     val currentSession: StateFlow<com.gameboost.optimizer.models.OptimizationSession?> = optimizationEngine.currentSession

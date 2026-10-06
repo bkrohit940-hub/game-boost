@@ -37,6 +37,39 @@ class PackageDetector(
         }
     }
 
+    fun getApplicationIcon(packageName: String): android.graphics.drawable.Drawable? {
+        return try {
+            packageManager.getApplicationIcon(packageName)
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    fun getApplicationLabel(packageName: String): String? {
+        return try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    fun launchPackage(packageName: String): Boolean {
+        return try {
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                true
+            } else {
+                false
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to launch package: $packageName", e)
+            false
+        }
+    }
+
     /**
      * Determines which package is currently in the foreground using Shizuku dumpsys activity.
      */

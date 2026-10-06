@@ -85,8 +85,14 @@ class OptimizationEngine(
         val applied = mutableListOf<String>()
         val failed = mutableListOf<String>()
 
+        val effectiveTargetRate = if (profile.targetRefreshRate <= 0f) {
+            displayController.getHighestSupportedRefreshRate()
+        } else {
+            profile.targetRefreshRate
+        }
+
         // 3. APPLY REFRESH RATE
-        val (displaySuccess, displayMsg) = displayController.applyRefreshRate(profile.targetRefreshRate)
+        val (displaySuccess, displayMsg) = displayController.applyRefreshRate(effectiveTargetRate)
         if (displaySuccess) {
             applied.add(displayMsg)
         } else {
@@ -103,22 +109,22 @@ class OptimizationEngine(
 
         // 5. VERIFY
         val finalDisplayState = displayController.getDisplayState()
-        val verified = Math.abs(finalDisplayState.currentRefreshRate - profile.targetRefreshRate) < 1.5f ||
-                (profile.targetRefreshRate <= 0f && finalDisplayState.currentRefreshRate == finalDisplayState.maxRefreshRate)
+        val verified = displaySuccess && Math.abs(finalDisplayState.currentRefreshRate - effectiveTargetRate) < 1.5f
 
-        val success = displaySuccess || applied.isNotEmpty()
+        val success = (displaySuccess || perfApplied.isNotEmpty()) && failed.isEmpty()
+        val partialSuccess = displaySuccess || perfApplied.isNotEmpty()
         val techExplanation = if (!verified && !displaySuccess) {
-            "Android rejected the requested display mode. This is common when the device OEM (e.g. Samsung/OPPO/Xiaomi) restricts custom refresh rates in battery saving mode or gaming driver limits."
+            "Display control restricted by device/OEM"
         } else null
 
         val result = OptimizationResult(
-            isSuccess = success,
+            isSuccess = partialSuccess,
             gameName = gameProfile.displayName,
-            requestedRefreshRate = profile.targetRefreshRate,
+            requestedRefreshRate = effectiveTargetRate,
             actualRefreshRate = finalDisplayState.currentRefreshRate,
             appliedSettings = applied,
             failedSettings = failed,
-            statusMessage = if (verified) "Optimization active" else "Applied with limitations",
+            statusMessage = if (verified && failed.isEmpty()) "Optimization active" else if (partialSuccess) "Applied with limitations" else "Optimization failed",
             technicalExplanation = techExplanation,
             verified = verified
         )
