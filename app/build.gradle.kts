@@ -18,8 +18,13 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            isCrunchPngs = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+    }
+
+    androidResources {
+        noCompress += listOf("png")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -232,6 +232,33 @@ fun DiagnosticsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Optimization Capability Matrix (Transparency specification)
+            SectionHeader(title = "Optimization Capability Matrix")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                val refreshStatus = if (shizukuStatus.isReady) "SUPPORTED" else "UNAVAILABLE"
+                val gameModeStatus = if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    if (shizukuStatus.isReady) "SUPPORTED" else "UNAVAILABLE"
+                } else {
+                    "NOT SUPPORTED"
+                }
+
+                DiagRow("Refresh Control", refreshStatus)
+                DiagRow("Game Mode API", gameModeStatus)
+                DiagRow("Background Memory Trim", if (shizukuStatus.isReady) "SUPPORTED" else "STANDALONE")
+                DiagRow("Thermal Override", "NOT SUPPORTED")
+                DiagRow("Process Priority (renice)", "UNAVAILABLE")
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Transparency Notice: Hardware thermal protection is never bypassed. Process priority renice is blocked by Linux kernel SELinux policies.",
+                    color = TextTertiary,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Active Backup State
             SectionHeader(title = "Reversible Session Backup")
             GlassCard(backgroundColor = SurfaceElevated) {
