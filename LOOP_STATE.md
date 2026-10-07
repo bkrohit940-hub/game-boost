@@ -19,12 +19,12 @@ TASK 1   [x] Root cause of "permission granted but not connected" identified & d
          [x] ShizukuState machine + real failure reasons in UI
          [x] TEST CONNECTION (exit code, stdout, stderr, real timing)
          [x] Auto-reconnect, binder death, permission revoked handled
-TASK 2   [ ] Library chosen and justified
-         [ ] PrivilegedBackend abstraction + BackendSelector
-         [ ] Keystore-protected key handling
-         [ ] Pairing (NSD discovery + manual fallback + notification input)
-         [ ] Authenticated connect + verified read-only command
-         [ ] Disconnect/drop handling, API < 30 handled
+TASK 2   [x] Library chosen and justified
+         [x] PrivilegedBackend abstraction + BackendSelector
+         [x] Keystore-protected key handling
+         [x] Pairing (NSD discovery + manual fallback + notification input)
+         [x] Authenticated connect + verified read-only command
+         [x] Disconnect/drop handling, API < 30 handled
 TASK 3   [ ] Design tokens + theme
          [ ] Dashboard (top bar, telemetry, carousel, primary button, controls, results)
          [ ] Reusable components (GameCard, StatusPill, TelemetryItem, RefreshRateSelector, ProfileSelector, OptimizationRow, ConnectionStatus)

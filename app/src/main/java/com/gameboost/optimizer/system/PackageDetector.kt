@@ -9,10 +9,19 @@ import android.util.Log
  */
 class PackageDetector(
     private val context: Context,
-    private val shizukuManager: ShizukuManager
+    private val shizukuManager: ShizukuManager,
+    private val privilegedEngine: PrivilegedExecutionEngine? = null
 ) {
     companion object {
         private const val TAG = "PackageDetector"
+    }
+
+    private suspend fun runPrivilegedCommand(command: String): Result<String> {
+        return privilegedEngine?.executeCommand(command) ?: shizukuManager.executeCommand(command)
+    }
+
+    private fun isPrivilegedReady(): Boolean {
+        return privilegedEngine?.isReady ?: shizukuManager.hasPermission()
     }
 
     private val packageManager: PackageManager = context.packageManager
@@ -74,10 +83,10 @@ class PackageDetector(
      * Determines which package is currently in the foreground using Shizuku dumpsys activity.
      */
     suspend fun getForegroundPackage(): String? {
-        if (!shizukuManager.hasPermission()) return null
+        if (!isPrivilegedReady()) return null
 
         return try {
-            val result = shizukuManager.executeCommand("dumpsys activity top | grep ACTIVITY")
+            val result = runPrivilegedCommand("dumpsys activity top | grep ACTIVITY")
             if (result.isSuccess) {
                 val output = result.getOrNull() ?: return null
                 // Sample line: "ACTIVITY com.tencent.ig/com.epicgames.ue4.SplashActivity 78af18e pid=1234"

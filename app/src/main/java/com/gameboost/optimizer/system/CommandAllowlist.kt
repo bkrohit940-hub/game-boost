@@ -51,9 +51,13 @@ object CommandAllowlist {
         Pattern.compile("^cmd power set-mode [0-1]$"),
 
         // Inspection / Diagnostics commands
-        Pattern.compile("^dumpsys display | grep -E \"(mSupportedModes|mBaseDisplayInfo|mOverrideDisplayInfo)\"$"),
-        Pattern.compile("^dumpsys power | grep -E \"mPowerSaveModeEnabled\"$"),
-        Pattern.compile("^dumpsys activity top | grep ACTIVITY$"),
+        Pattern.compile("^id$"),
+        Pattern.compile("^whoami$"),
+        Pattern.compile("^getprop ro\\.build\\.version\\.release$"),
+        Pattern.compile("^getprop ro\\.product\\.model$"),
+        Pattern.compile("^dumpsys display \\| grep -E \"(mSupportedModes|mBaseDisplayInfo|mOverrideDisplayInfo)\"$"),
+        Pattern.compile("^dumpsys power \\| grep -E \"mPowerSaveModeEnabled\"$"),
+        Pattern.compile("^dumpsys activity top \\| grep ACTIVITY$"),
         Pattern.compile("^dumpsys thermalservice$"),
         Pattern.compile("^dumpsys battery$")
     )

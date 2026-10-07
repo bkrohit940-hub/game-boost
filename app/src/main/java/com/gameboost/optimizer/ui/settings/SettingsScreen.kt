@@ -61,10 +61,27 @@ import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.SectionHeader
 import com.gameboost.optimizer.ui.components.StatusBadge
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+
 @Composable
 fun SettingsScreen(
     userPreferences: AppUserPreferences,
     shizukuStatus: ShizukuStatus,
+    wirelessAdbState: com.gameboost.optimizer.system.adb.WirelessAdbState? = null,
+    adbOperationStatus: String? = null,
+    onPairWirelessAdb: ((String, Int) -> Unit)? = null,
+    onConnectWirelessAdb: ((Int) -> Unit)? = null,
+    onDisconnectWirelessAdb: (() -> Unit)? = null,
     onToggleAutoBoost: (Boolean) -> Unit,
     onToggleRestoreOnExit: (Boolean) -> Unit,
     onRecheckShizuku: () -> Unit,
@@ -276,6 +293,206 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("SETUP GUIDE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Wireless ADB Management (Android 11+ Fallback)
+            SectionHeader(title = "Wireless Debugging (ADB Fallback)")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                var pairingCodeInput by remember { mutableStateOf("") }
+                var pairingPortInput by remember { mutableStateOf("") }
+                var connectPortInput by remember { mutableStateOf("") }
+
+                val isAdbConnected = wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTED
+                val adbStatusText = when (wirelessAdbState?.status) {
+                    com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTED -> "CONNECTED"
+                    com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTING -> "CONNECTING..."
+                    com.gameboost.optimizer.system.adb.AdbConnectionStatus.PAIRING -> "PAIRING..."
+                    com.gameboost.optimizer.system.adb.AdbConnectionStatus.PAIRED -> "PAIRED"
+                    com.gameboost.optimizer.system.adb.AdbConnectionStatus.AUTHENTICATING -> "AUTHENTICATING..."
+                    com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTION_FAILED -> "FAILED"
+                    else -> "DISCONNECTED"
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isAdbConnected) "WIRELESS ADB ACTIVE" else "WIRELESS DEBUGGING",
+                            color = if (isAdbConnected) StatusReady else StatusWarning,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isAdbConnected) "Loopback TLS connection active on port ${wirelessAdbState.connectedPort}"
+                            else "Direct on-device shell for Android 11+ (No PC required)",
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    StatusBadge(
+                        text = adbStatusText,
+                        state = when {
+                            isAdbConnected -> BadgeState.SUCCESS
+                            wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTION_FAILED -> BadgeState.ERROR
+                            wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTING ||
+                            wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.PAIRING -> BadgeState.WARNING
+                            else -> BadgeState.NEUTRAL
+                        }
+                    )
+                }
+
+                if (adbOperationStatus != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = adbOperationStatus,
+                        color = AccentPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                if (isAdbConnected) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (onDisconnectWirelessAdb != null) {
+                        OutlinedButton(
+                            onClick = onDisconnectWirelessAdb,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("DISCONNECT WIRELESS ADB", fontSize = 11.sp)
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "1. PAIR DEVICE (ONE-TIME)",
+                        color = TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Enable Developer Options > Wireless Debugging > 'Pair device with pairing code'",
+                        color = TextSecondary,
+                        fontSize = 10.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = pairingCodeInput,
+                            onValueChange = { if (it.length <= 6) pairingCodeInput = it },
+                            label = { Text("Pair Code (6 digits)", fontSize = 10.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1.2f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentPrimary,
+                                unfocusedBorderColor = BorderSubtle,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+
+                        OutlinedTextField(
+                            value = pairingPortInput,
+                            onValueChange = { if (it.length <= 5) pairingPortInput = it },
+                            label = { Text("Pair Port", fontSize = 10.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(0.8f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentPrimary,
+                                unfocusedBorderColor = BorderSubtle,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Button(
+                        onClick = {
+                            val code = pairingCodeInput.trim()
+                            val port = pairingPortInput.toIntOrNull() ?: 0
+                            if (code.length == 6 && port in 1024..65535) {
+                                onPairWirelessAdb?.invoke(code, port)
+                            }
+                        },
+                        enabled = pairingCodeInput.length == 6 && (pairingPortInput.toIntOrNull() ?: 0) in 1024..65535,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("PAIR WITH DEVICE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "2. CONNECT TO PORT",
+                        color = TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Enter the main port shown under 'IP address & Port' in Wireless Debugging",
+                        color = TextSecondary,
+                        fontSize = 10.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = connectPortInput,
+                            onValueChange = { if (it.length <= 5) connectPortInput = it },
+                            label = { Text("Port (e.g. 41235)", fontSize = 10.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentPrimary,
+                                unfocusedBorderColor = BorderSubtle,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+
+                        Button(
+                            onClick = {
+                                val port = connectPortInput.toIntOrNull() ?: 0
+                                if (port in 1024..65535) {
+                                    onConnectWirelessAdb?.invoke(port)
+                                }
+                            },
+                            enabled = (connectPortInput.toIntOrNull() ?: 0) in 1024..65535,
+                            modifier = Modifier.height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusReady, contentColor = DarkBg),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Link, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("CONNECT", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

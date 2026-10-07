@@ -28,11 +28,20 @@ class MainViewModel : ViewModel() {
     private val repo = app.optimizationRepository
 
     val shizukuStatus: StateFlow<ShizukuStatus> = repo.shizukuStatus
+    val privilegedState: StateFlow<com.gameboost.optimizer.system.PrivilegedSystemState>? = repo.privilegedState
+    val wirelessAdbState: StateFlow<com.gameboost.optimizer.system.adb.WirelessAdbState>? = repo.wirelessAdbState
     val isOptimized: StateFlow<Boolean> = repo.isOptimized
+    val activeGameProfile: StateFlow<GameProfile?> = repo.activeGameProfile
     val activeGame: StateFlow<GameProfile?> = repo.activeGameProfile
     val lastResult: StateFlow<OptimizationResult?> = repo.lastResult
     val currentSession: StateFlow<OptimizationSession?> = repo.currentSession
     val lastRestorationResult: StateFlow<RestorationResult?> = repo.lastRestorationResult
+
+    private val _testResult = MutableStateFlow<com.gameboost.optimizer.models.ShellCommandResult?>(null)
+    val testResult: StateFlow<com.gameboost.optimizer.models.ShellCommandResult?> = _testResult.asStateFlow()
+
+    private val _isTestingBackend = MutableStateFlow(false)
+    val isTestingBackend: StateFlow<Boolean> = _isTestingBackend.asStateFlow()
 
     val userPreferences: StateFlow<AppUserPreferences> = repo.userPreferences.stateIn(
         scope = viewModelScope,
@@ -221,5 +230,54 @@ class MainViewModel : ViewModel() {
 
     fun getActiveBackup(): DisplayStateBackup? {
         return app.optimizationEngine.getActiveBackup()
+    }
+
+    fun testBackend() {
+        viewModelScope.launch {
+            _isTestingBackend.value = true
+            val res = repo.testPrivilegedBackend()
+            _testResult.value = res
+            _isTestingBackend.value = false
+        }
+    }
+
+    fun clearTestResult() {
+        _testResult.value = null
+    }
+
+    fun openShizuku() {
+        repo.openShizukuApp()
+    }
+
+    private val _adbOperationStatus = MutableStateFlow<String?>(null)
+    val adbOperationStatus: StateFlow<String?> = _adbOperationStatus.asStateFlow()
+
+    fun pairWirelessAdb(pairingCode: String, port: Int) {
+        viewModelScope.launch {
+            _adbOperationStatus.value = "Pairing with 127.0.0.1:$port..."
+            val res = repo.pairWirelessAdb(pairingCode, port)
+            if (res.isSuccess) {
+                _adbOperationStatus.value = "Paired successfully. Enter connect port."
+            } else {
+                _adbOperationStatus.value = "Pairing failed: ${res.exceptionOrNull()?.localizedMessage}"
+            }
+        }
+    }
+
+    fun connectWirelessAdb(port: Int) {
+        viewModelScope.launch {
+            _adbOperationStatus.value = "Connecting to 127.0.0.1:$port..."
+            val res = repo.connectWirelessAdb(port)
+            if (res.isSuccess) {
+                _adbOperationStatus.value = "Connected to Wireless ADB"
+            } else {
+                _adbOperationStatus.value = "Connection failed: ${res.exceptionOrNull()?.localizedMessage}"
+            }
+        }
+    }
+
+    fun disconnectWirelessAdb() {
+        repo.disconnectWirelessAdb()
+        _adbOperationStatus.value = "Disconnected"
     }
 }

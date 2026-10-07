@@ -10,6 +10,7 @@ import com.gameboost.optimizer.models.RestorationResult
 import com.gameboost.optimizer.models.SessionStatus
 import com.gameboost.optimizer.system.DisplayController
 import com.gameboost.optimizer.system.PerformanceController
+import com.gameboost.optimizer.system.PrivilegedExecutionEngine
 import com.gameboost.optimizer.system.ShizukuManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ import kotlinx.coroutines.flow.asStateFlow
 class OptimizationEngine(
     private val shizukuManager: ShizukuManager,
     private val displayController: DisplayController,
-    private val performanceController: PerformanceController
+    private val performanceController: PerformanceController,
+    private val privilegedEngine: PrivilegedExecutionEngine? = null
 ) {
     companion object {
         private const val TAG = "OptimizationEngine"
@@ -52,14 +54,15 @@ class OptimizationEngine(
     ): OptimizationResult {
         Log.i(TAG, "Starting optimization session for ${gameProfile.displayName} with target ${profile.targetRefreshRate}Hz")
 
-        if (!shizukuManager.hasPermission()) {
+        val hasPrivilege = privilegedEngine?.isReady == true || shizukuManager.hasPermission()
+        if (!hasPrivilege) {
             val res = OptimizationResult(
                 isSuccess = false,
                 gameName = gameProfile.displayName,
                 requestedRefreshRate = profile.targetRefreshRate,
                 actualRefreshRate = displayController.getDisplayState().currentRefreshRate,
-                statusMessage = "Shizuku authorization required",
-                technicalExplanation = "GameBoost needs user-authorized Shizuku to adjust display and system configuration."
+                statusMessage = "Privileged authorization required",
+                technicalExplanation = "GameBoost needs user-authorized Shizuku or Wireless Debugging to adjust display and system configuration."
             )
             _lastResult.value = res
             return res

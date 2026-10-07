@@ -18,10 +18,19 @@ import kotlinx.coroutines.withContext
  */
 class DisplayController(
     private val context: Context,
-    private val shizukuManager: ShizukuManager
+    private val shizukuManager: ShizukuManager,
+    private val privilegedEngine: PrivilegedExecutionEngine? = null
 ) {
     companion object {
         private const val TAG = "DisplayController"
+    }
+
+    private suspend fun runPrivilegedCommand(command: String): Result<String> {
+        return privilegedEngine?.executeCommand(command) ?: shizukuManager.executeCommand(command)
+    }
+
+    private fun isPrivilegedReady(): Boolean {
+        return privilegedEngine?.isReady ?: shizukuManager.hasPermission()
     }
 
     private val displayManager =
@@ -85,12 +94,12 @@ class DisplayController(
      * Reads current system settings to create a reversible backup before modification.
      */
     suspend fun createBackup(): DisplayStateBackup = withContext(Dispatchers.IO) {
-        val peak = shizukuManager.executeCommand("settings get system peak_refresh_rate").getOrNull()
-        val min = shizukuManager.executeCommand("settings get system min_refresh_rate").getOrNull()
-        val user = shizukuManager.executeCommand("settings get secure user_refresh_rate").getOrNull()
-        val winAnim = shizukuManager.executeCommand("settings get global window_animation_scale").getOrNull()
-        val transAnim = shizukuManager.executeCommand("settings get global transition_animation_scale").getOrNull()
-        val durAnim = shizukuManager.executeCommand("settings get global animator_duration_scale").getOrNull()
+        val peak = runPrivilegedCommand("settings get system peak_refresh_rate").getOrNull()
+        val min = runPrivilegedCommand("settings get system min_refresh_rate").getOrNull()
+        val user = runPrivilegedCommand("settings get secure user_refresh_rate").getOrNull()
+        val winAnim = runPrivilegedCommand("settings get global window_animation_scale").getOrNull()
+        val transAnim = runPrivilegedCommand("settings get global transition_animation_scale").getOrNull()
+        val durAnim = runPrivilegedCommand("settings get global animator_duration_scale").getOrNull()
 
         DisplayStateBackup(
             peakRefreshRate = sanitizeSettingValue(peak),
@@ -111,8 +120,8 @@ class DisplayController(
      * When targetRate <= 0f, automatically detects and applies the highest supported display mode.
      */
     suspend fun applyRefreshRate(targetRate: Float = 0f): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (!shizukuManager.hasPermission()) {
-            return@withContext Pair(false, "Shizuku authorization required to configure display rate")
+        if (!isPrivilegedReady()) {
+            return@withContext Pair(false, "Privileged authorization required to configure display rate")
         }
 
         val displayCaps = getDisplayCapabilities()
@@ -125,16 +134,16 @@ class DisplayController(
         Log.d(TAG, "Attempting to switch refresh rate to ${effectiveRate}Hz")
 
         // 1. Set peak and min refresh rates in system namespace
-        shizukuManager.executeCommand("settings put system peak_refresh_rate $effectiveRate")
-        shizukuManager.executeCommand("settings put system min_refresh_rate $effectiveRate")
+        runPrivilegedCommand("settings put system peak_refresh_rate $effectiveRate")
+        runPrivilegedCommand("settings put system min_refresh_rate $effectiveRate")
 
         // 2. Also update global namespace for AOSP compatibility
-        shizukuManager.executeCommand("settings put global peak_refresh_rate $effectiveRate")
-        shizukuManager.executeCommand("settings put global min_refresh_rate $effectiveRate")
+        runPrivilegedCommand("settings put global peak_refresh_rate $effectiveRate")
+        runPrivilegedCommand("settings put global min_refresh_rate $effectiveRate")
 
         // 3. For OEM ROMs that use secure user_refresh_rate (e.g., ColorOS/RealmeUI)
         if (effectiveRate.toInt() == 144 || effectiveRate.toInt() == 120 || effectiveRate.toInt() == 90 || effectiveRate.toInt() == 60) {
-            shizukuManager.executeCommand("settings put secure user_refresh_rate ${effectiveRate.toInt()}")
+            runPrivilegedCommand("settings put secure user_refresh_rate ${effectiveRate.toInt()}")
         }
 
         // Allow system compositor to enact the rate change
@@ -158,35 +167,35 @@ class DisplayController(
      * Restores previous display and system state from backup.
      */
     suspend fun restoreDefault(backup: DisplayStateBackup?): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (!shizukuManager.hasPermission()) {
-            return@withContext Pair(false, "Shizuku authorization required to restore settings")
+        if (!isPrivilegedReady()) {
+            return@withContext Pair(false, "Privileged authorization required to restore settings")
         }
 
         try {
             if (backup?.peakRefreshRate != null && backup.peakRefreshRate != "null") {
-                shizukuManager.executeCommand("settings put system peak_refresh_rate ${backup.peakRefreshRate}")
-                shizukuManager.executeCommand("settings put global peak_refresh_rate ${backup.peakRefreshRate}")
+                runPrivilegedCommand("settings put system peak_refresh_rate ${backup.peakRefreshRate}")
+                runPrivilegedCommand("settings put global peak_refresh_rate ${backup.peakRefreshRate}")
             } else {
-                shizukuManager.executeCommand("settings delete system peak_refresh_rate")
-                shizukuManager.executeCommand("settings delete global peak_refresh_rate")
+                runPrivilegedCommand("settings delete system peak_refresh_rate")
+                runPrivilegedCommand("settings delete global peak_refresh_rate")
             }
 
             if (backup?.minRefreshRate != null && backup.minRefreshRate != "null") {
-                shizukuManager.executeCommand("settings put system min_refresh_rate ${backup.minRefreshRate}")
-                shizukuManager.executeCommand("settings put global min_refresh_rate ${backup.minRefreshRate}")
+                runPrivilegedCommand("settings put system min_refresh_rate ${backup.minRefreshRate}")
+                runPrivilegedCommand("settings put global min_refresh_rate ${backup.minRefreshRate}")
             } else {
-                shizukuManager.executeCommand("settings delete system min_refresh_rate")
-                shizukuManager.executeCommand("settings delete global min_refresh_rate")
+                runPrivilegedCommand("settings delete system min_refresh_rate")
+                runPrivilegedCommand("settings delete global min_refresh_rate")
             }
 
             if (backup?.userRefreshRate != null && backup.userRefreshRate != "null") {
-                shizukuManager.executeCommand("settings put secure user_refresh_rate ${backup.userRefreshRate}")
+                runPrivilegedCommand("settings put secure user_refresh_rate ${backup.userRefreshRate}")
             } else {
-                shizukuManager.executeCommand("settings delete secure user_refresh_rate")
+                runPrivilegedCommand("settings delete secure user_refresh_rate")
             }
 
             // Clear any user-preferred display mode override
-            shizukuManager.executeCommand("cmd display clear-user-preferred-display-mode")
+            runPrivilegedCommand("cmd display clear-user-preferred-display-mode")
 
             delay(250)
             Pair(true, "Refresh rate restored")

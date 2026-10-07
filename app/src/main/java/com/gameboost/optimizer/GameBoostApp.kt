@@ -11,9 +11,25 @@ import com.gameboost.optimizer.system.PackageDetector
 import com.gameboost.optimizer.system.PerformanceController
 import com.gameboost.optimizer.system.ShizukuManager
 
+import com.gameboost.optimizer.system.PrivilegedExecutionEngine
+import com.gameboost.optimizer.system.ShizukuBackend
+import com.gameboost.optimizer.system.WirelessAdbBackend
+import com.gameboost.optimizer.system.adb.AdbConnectionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+
 class GameBoostApp : Application() {
 
     lateinit var shizukuManager: ShizukuManager
+        private set
+
+    lateinit var adbConnectionManager: AdbConnectionManager
+        private set
+
+    lateinit var privilegedEngine: PrivilegedExecutionEngine
         private set
 
     lateinit var displayController: DisplayController
@@ -45,17 +61,24 @@ class GameBoostApp : Application() {
         instance = this
 
         shizukuManager = ShizukuManager(this)
-        displayController = DisplayController(this, shizukuManager)
-        performanceController = PerformanceController(this, shizukuManager)
+        adbConnectionManager = AdbConnectionManager(this)
+
+        val shizukuBackend = ShizukuBackend(shizukuManager)
+        val wirelessAdbBackend = WirelessAdbBackend(adbConnectionManager)
+        privilegedEngine = PrivilegedExecutionEngine(shizukuBackend, wirelessAdbBackend)
+
+        displayController = DisplayController(this, shizukuManager, privilegedEngine)
+        performanceController = PerformanceController(this, shizukuManager, privilegedEngine)
         deviceCapabilityDetector = DeviceCapabilityDetector(this, displayController)
-        packageDetector = PackageDetector(this, shizukuManager)
+        packageDetector = PackageDetector(this, shizukuManager, privilegedEngine)
         hardwareMonitor = HardwareMonitor(this, displayController)
         userPreferencesRepository = UserPreferencesRepository(this)
 
         optimizationEngine = OptimizationEngine(
             shizukuManager = shizukuManager,
             displayController = displayController,
-            performanceController = performanceController
+            performanceController = performanceController,
+            privilegedEngine = privilegedEngine
         )
 
         optimizationRepository = OptimizationRepository(
@@ -64,8 +87,19 @@ class GameBoostApp : Application() {
             deviceCapabilityDetector = deviceCapabilityDetector,
             hardwareMonitor = hardwareMonitor,
             userPreferencesRepository = userPreferencesRepository,
-            optimizationEngine = optimizationEngine
+            optimizationEngine = optimizationEngine,
+            privilegedEngine = privilegedEngine,
+            adbConnectionManager = adbConnectionManager
         )
+
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            combine(
+                shizukuManager.statusFlow,
+                adbConnectionManager.stateFlow
+            ) { shizuku, adb ->
+                privilegedEngine.updateStates(shizuku, adb)
+            }.collect()
+        }
     }
 
     companion object {

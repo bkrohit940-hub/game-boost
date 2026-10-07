@@ -59,6 +59,11 @@ fun DiagnosticsScreen(
     shizukuStatus: ShizukuStatus,
     lastResult: OptimizationResult?,
     activeBackup: DisplayStateBackup?,
+    privilegedState: com.gameboost.optimizer.system.PrivilegedSystemState? = null,
+    testResult: com.gameboost.optimizer.models.ShellCommandResult? = null,
+    isTestingBackend: Boolean = false,
+    onTestBackend: (() -> Unit)? = null,
+    onClearTestResult: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -168,6 +173,138 @@ fun DiagnosticsScreen(
                 DiagRow("Binder Alive", if (shizukuStatus.isRunning) "Yes" else "No")
                 DiagRow("API Version", "v${shizukuStatus.version}")
                 DiagRow("Process UID", "${shizukuStatus.uid}")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Privileged Execution Orchestrator & Live Test
+            SectionHeader(title = "Privileged Execution Engine")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                val activeType = privilegedState?.activeBackendType ?: com.gameboost.optimizer.system.BackendType.NONE
+                val isReady = privilegedState?.isPrivilegedReady ?: shizukuStatus.isReady
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "ACTIVE BACKEND: ${activeType.displayName.uppercase()}",
+                            color = if (isReady) StatusReady else StatusWarning,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isReady) "IPC command execution ready" else "No active privileged backend",
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    StatusBadge(
+                        text = if (isReady) "READY" else "UNAVAILABLE",
+                        state = if (isReady) BadgeState.SUCCESS else BadgeState.WARNING
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                DiagRow("Routing Priority", "1. Shizuku -> 2. Wireless ADB")
+                DiagRow("Active Connection", activeType.displayName)
+                if (privilegedState?.wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTED) {
+                    DiagRow("Wireless ADB Port", "${privilegedState.wirelessAdbState.connectedPort ?: "N/A"}")
+                    DiagRow("TLS Handshake Latency", "${privilegedState.wirelessAdbState.lastLatencyMs}ms")
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (onTestBackend != null) {
+                    androidx.compose.material3.Button(
+                        onClick = onTestBackend,
+                        enabled = !isTestingBackend,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = AccentPrimary,
+                            contentColor = DarkBg
+                        ),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                    ) {
+                        if (isTestingBackend) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = DarkBg,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("RUNNING READ-ONLY 'id' TEST...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("TEST PRIVILEGED SHELL EXECUTION", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (testResult != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        color = DarkBg,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, if (testResult.isSuccess) StatusReady.copy(alpha = 0.5f) else StatusDanger.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (testResult.isSuccess) "EXECUTION VERIFIED" else "EXECUTION FAILED",
+                                    color = if (testResult.isSuccess) StatusReady else StatusDanger,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${testResult.durationMs}ms • Exit ${testResult.exitCode}",
+                                    color = TextTertiary,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Command: ${testResult.command}",
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            if (testResult.stdout.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "stdout: ${testResult.stdout}",
+                                    color = TextPrimary,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                            if (testResult.stderr.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "stderr: ${testResult.stderr}",
+                                    color = StatusDanger,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

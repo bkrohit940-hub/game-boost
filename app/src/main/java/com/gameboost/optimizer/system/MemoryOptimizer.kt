@@ -43,7 +43,8 @@ data class MemoryOptimizationResult(
  */
 class MemoryOptimizer(
     private val context: Context,
-    private val shizukuManager: ShizukuManager
+    private val shizukuManager: ShizukuManager,
+    private val privilegedEngine: PrivilegedExecutionEngine? = null
 ) {
     companion object {
         private const val TAG = "MemoryOptimizer"
@@ -111,6 +112,14 @@ class MemoryOptimizer(
         }.map { it.packageName }
     }
 
+    private suspend fun runPrivilegedCommand(command: String): Result<String> {
+        return privilegedEngine?.executeCommand(command) ?: shizukuManager.executeCommand(command)
+    }
+
+    private fun isPrivilegedReady(): Boolean {
+        return privilegedEngine?.isReady ?: shizukuManager.hasPermission()
+    }
+
     /**
      * Optimizes background memory workload cleanly without arbitrary process killing.
      */
@@ -121,7 +130,7 @@ class MemoryOptimizer(
         val beforeMem = getCurrentMemoryInfo()
         val ramUsedBefore = beforeMem.totalMem - beforeMem.availMem
 
-        if (!shizukuManager.hasPermission()) {
+        if (!isPrivilegedReady()) {
             val afterMem = getCurrentMemoryInfo()
             return@withContext MemoryOptimizationResult(
                 ramUsedBeforeBytes = ramUsedBefore,
@@ -129,7 +138,7 @@ class MemoryOptimizer(
                 ramTotalBytes = afterMem.totalMem,
                 ramAvailableBytes = afterMem.availMem,
                 optimizedPackages = emptyList(),
-                statusMessage = "Shizuku authorization required for background memory trimming"
+                statusMessage = "Privileged authorization required for background memory trimming"
             )
         }
 
@@ -153,7 +162,7 @@ class MemoryOptimizer(
             }
             if (CommandAllowlist.validatePackageName(pkg)) {
                 val cmd = "am trim-memory $pkg $trimLevel"
-                val res = shizukuManager.executeCommand(cmd)
+                val res = runPrivilegedCommand(cmd)
                 if (res.isSuccess) {
                     trimmedPackages.add(pkg)
                 }

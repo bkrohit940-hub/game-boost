@@ -41,6 +41,11 @@ fun MainNavigation(
     val selectedGameId by viewModel.selectedGameId.collectAsState()
     val selectedMode by viewModel.selectedMode.collectAsState()
     val isBoosting by viewModel.isBoosting.collectAsState()
+    val privilegedState by (viewModel.privilegedState ?: kotlinx.coroutines.flow.MutableStateFlow(com.gameboost.optimizer.system.PrivilegedSystemState())).collectAsState()
+    val wirelessAdbState by (viewModel.wirelessAdbState ?: kotlinx.coroutines.flow.MutableStateFlow(com.gameboost.optimizer.system.adb.WirelessAdbState())).collectAsState()
+    val testResult by viewModel.testResult.collectAsState()
+    val isTestingBackend by viewModel.isTestingBackend.collectAsState()
+    val adbOperationStatus by viewModel.adbOperationStatus.collectAsState()
 
     // Clean, fast startup branding: starts with StartupKey
     val backStack = rememberNavBackStack(StartupKey)
@@ -60,8 +65,13 @@ fun MainNavigation(
                 GameBoostNavBar(
                     currentKey = currentKey,
                     onNavigate = { targetKey ->
-                        backStack.clear()
-                        backStack.add(targetKey)
+                        if (currentKey != targetKey) {
+                            backStack.clear()
+                            backStack.add(HomeKey)
+                            if (targetKey != HomeKey) {
+                                backStack.add(targetKey)
+                            }
+                        }
                     }
                 )
             }
@@ -230,6 +240,11 @@ fun MainNavigation(
                             shizukuStatus = shizukuStatus,
                             lastResult = lastResult,
                             activeBackup = viewModel.getActiveBackup(),
+                            privilegedState = privilegedState,
+                            testResult = testResult,
+                            isTestingBackend = isTestingBackend,
+                            onTestBackend = { viewModel.testBackend() },
+                            onClearTestResult = { viewModel.clearTestResult() },
                             onBack = {
                                 backStack.clear()
                                 backStack.add(HomeKey)
@@ -241,6 +256,11 @@ fun MainNavigation(
                         SettingsScreen(
                             userPreferences = userPrefs,
                             shizukuStatus = shizukuStatus,
+                            wirelessAdbState = wirelessAdbState,
+                            adbOperationStatus = adbOperationStatus,
+                            onPairWirelessAdb = { code, port -> viewModel.pairWirelessAdb(code, port) },
+                            onConnectWirelessAdb = { port -> viewModel.connectWirelessAdb(port) },
+                            onDisconnectWirelessAdb = { viewModel.disconnectWirelessAdb() },
                             onToggleAutoBoost = { viewModel.toggleAutoBoost(it) },
                             onToggleRestoreOnExit = { viewModel.toggleRestoreOnExit(it) },
                             onRecheckShizuku = { viewModel.refreshShizuku() },

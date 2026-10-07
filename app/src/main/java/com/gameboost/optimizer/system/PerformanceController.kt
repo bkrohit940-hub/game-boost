@@ -16,10 +16,19 @@ import kotlinx.coroutines.withContext
 class PerformanceController(
     private val context: Context,
     private val shizukuManager: ShizukuManager,
-    val memoryOptimizer: MemoryOptimizer = MemoryOptimizer(context, shizukuManager)
+    private val privilegedEngine: PrivilegedExecutionEngine? = null,
+    val memoryOptimizer: MemoryOptimizer = MemoryOptimizer(context, shizukuManager, privilegedEngine)
 ) {
     companion object {
         private const val TAG = "PerformanceController"
+    }
+
+    private suspend fun runPrivilegedCommand(command: String): Result<String> {
+        return privilegedEngine?.executeCommand(command) ?: shizukuManager.executeCommand(command)
+    }
+
+    private fun isPrivilegedReady(): Boolean {
+        return privilegedEngine?.isReady ?: shizukuManager.hasPermission()
     }
 
     suspend fun applyPerformanceProfile(
@@ -29,8 +38,8 @@ class PerformanceController(
         val applied = mutableListOf<String>()
         val failed = mutableListOf<String>()
 
-        if (!shizukuManager.hasPermission()) {
-            failed.add("Shizuku unauthorized")
+        if (!isPrivilegedReady()) {
+            failed.add("Privileged unauthorized")
             return@withContext Pair(applied, failed)
         }
 
@@ -43,11 +52,11 @@ class PerformanceController(
                 PerformanceMode.THERMAL_OVERRIDE -> "0.0"
             }
 
-            val curWin = shizukuManager.executeCommand("settings get global window_animation_scale").getOrNull()?.trim()
+            val curWin = runPrivilegedCommand("settings get global window_animation_scale").getOrNull()?.trim()
             if (curWin != scale) {
-                val winRes = shizukuManager.executeCommand("settings put global window_animation_scale $scale")
-                val transRes = shizukuManager.executeCommand("settings put global transition_animation_scale $scale")
-                val durRes = shizukuManager.executeCommand("settings put global animator_duration_scale $scale")
+                val winRes = runPrivilegedCommand("settings put global window_animation_scale $scale")
+                val transRes = runPrivilegedCommand("settings put global transition_animation_scale $scale")
+                val durRes = runPrivilegedCommand("settings put global animator_duration_scale $scale")
 
                 if (winRes.isSuccess && transRes.isSuccess && durRes.isSuccess) {
                     applied.add("UI Animation Scale ($scale x)")
@@ -70,7 +79,7 @@ class PerformanceController(
                 }
 
                 val cmd = "cmd game mode $modeArg $targetPackageName"
-                val res = shizukuManager.executeCommand(cmd)
+                val res = runPrivilegedCommand(cmd)
                 if (res.isSuccess) {
                     applied.add("Game Mode API: $modeArg ($targetPackageName)")
                 } else {
@@ -103,7 +112,7 @@ class PerformanceController(
             } else {
                 // Use only legitimate, allowlisted power command to signal sustained gaming
                 val thermalCmd = "cmd power set-mode 0"
-                val res = shizukuManager.executeCommand(thermalCmd)
+                val res = runPrivilegedCommand(thermalCmd)
                 if (res.isSuccess) {
                     applied.add("Thermal override: Sustained power mode signaled (Hardware limits remain active)")
                 } else {
@@ -122,7 +131,7 @@ class PerformanceController(
         val restored = mutableListOf<String>()
         val failed = mutableListOf<String>()
 
-        if (!shizukuManager.hasPermission()) {
+        if (!isPrivilegedReady()) {
             return@withContext Pair(restored, failed)
         }
 
@@ -131,9 +140,9 @@ class PerformanceController(
         val transScale = backup?.transitionAnimationScale ?: "1.0"
         val durScale = backup?.animatorDurationScale ?: "1.0"
 
-        val winRes = shizukuManager.executeCommand("settings put global window_animation_scale $winScale")
-        val transRes = shizukuManager.executeCommand("settings put global transition_animation_scale $transScale")
-        val durRes = shizukuManager.executeCommand("settings put global animator_duration_scale $durScale")
+        val winRes = runPrivilegedCommand("settings put global window_animation_scale $winScale")
+        val transRes = runPrivilegedCommand("settings put global transition_animation_scale $transScale")
+        val durRes = runPrivilegedCommand("settings put global animator_duration_scale $durScale")
 
         if (winRes.isSuccess && transRes.isSuccess && durRes.isSuccess) {
             restored.add("Restored animation scales ($winScale, $transScale, $durScale)")
@@ -144,7 +153,7 @@ class PerformanceController(
         // Reset game mode to standard if previously set
         if (!targetPackageName.isNullOrEmpty() && Build.VERSION.SDK_INT >= 31) {
             if (CommandAllowlist.validatePackageName(targetPackageName)) {
-                val res = shizukuManager.executeCommand("cmd game mode standard $targetPackageName")
+                val res = runPrivilegedCommand("cmd game mode standard $targetPackageName")
                 if (res.isSuccess) {
                     restored.add("Restored Game Mode: standard")
                 }

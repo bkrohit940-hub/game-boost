@@ -23,9 +23,13 @@ class OptimizationRepository(
     private val deviceCapabilityDetector: DeviceCapabilityDetector,
     private val hardwareMonitor: HardwareMonitor,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val optimizationEngine: OptimizationEngine
+    private val optimizationEngine: OptimizationEngine,
+    val privilegedEngine: com.gameboost.optimizer.system.PrivilegedExecutionEngine? = null,
+    val adbConnectionManager: com.gameboost.optimizer.system.adb.AdbConnectionManager? = null
 ) {
     val shizukuStatus: StateFlow<ShizukuStatus> = shizukuManager.statusFlow
+    val wirelessAdbState: StateFlow<com.gameboost.optimizer.system.adb.WirelessAdbState>? = adbConnectionManager?.stateFlow
+    val privilegedState: StateFlow<com.gameboost.optimizer.system.PrivilegedSystemState>? = privilegedEngine?.systemState
     val isOptimized: StateFlow<Boolean> = optimizationEngine.isOptimized
     val activeGameProfile: StateFlow<GameProfile?> = optimizationEngine.activeGameProfile
     val lastResult: StateFlow<OptimizationResult?> = optimizationEngine.lastResult
@@ -114,5 +118,27 @@ class OptimizationRepository(
 
     suspend fun setShizukuEverAuthorized(auth: Boolean) {
         userPreferencesRepository.setShizukuEverAuthorized(auth)
+    }
+
+    suspend fun pairWirelessAdb(pairingCode: String, port: Int): Result<Boolean> {
+        return adbConnectionManager?.pair(pairingCode, port)
+            ?: Result.failure(IllegalStateException("Wireless ADB not available"))
+    }
+
+    suspend fun connectWirelessAdb(port: Int): Result<Boolean> {
+        return adbConnectionManager?.connect(port)
+            ?: Result.failure(IllegalStateException("Wireless ADB not available"))
+    }
+
+    fun disconnectWirelessAdb() {
+        adbConnectionManager?.disconnect()
+    }
+
+    suspend fun testPrivilegedBackend(): com.gameboost.optimizer.models.ShellCommandResult {
+        return privilegedEngine?.testActiveBackend() ?: shizukuManager.testConnection()
+    }
+
+    fun openShizukuApp(): Boolean {
+        return shizukuManager.openShizukuApp()
     }
 }
