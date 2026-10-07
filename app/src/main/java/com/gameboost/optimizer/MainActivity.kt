@@ -11,12 +11,31 @@ import androidx.compose.ui.Modifier
 import com.gameboost.optimizer.theme.GameBoostTheme
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    enableEdgeToEdge()
-    setContent {
-      GameBoostTheme { Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { MainNavigation() } }
+        enableEdgeToEdge()
+        setContent {
+            GameBoostTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainNavigation()
+                }
+            }
+        }
     }
-  }
+
+    override fun onResume() {
+        super.onResume()
+        // Re-evaluate Shizuku authorization and privileged connection when user returns to app
+        try {
+            GameBoostApp.instance.shizukuManager.refreshStatus()
+        } catch (_: Throwable) {}
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+    }
 }

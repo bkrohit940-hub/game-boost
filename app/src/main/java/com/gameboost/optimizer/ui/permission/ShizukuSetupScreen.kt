@@ -198,7 +198,7 @@ fun ShizukuSetupScreen(
 
             // Action Buttons
             when (status.state) {
-                ShizukuState.SHIZUKU_READY -> {
+                is ShizukuState.ShellVerified -> {
                     Button(
                         onClick = onContinue,
                         modifier = Modifier
@@ -213,8 +213,10 @@ fun ShizukuSetupScreen(
                     }
                 }
 
-                ShizukuState.PERMISSION_REQUIRED,
-                ShizukuState.PERMISSION_REVOKED -> {
+                is ShizukuState.ServiceRunningPermissionMissing,
+                is ShizukuState.PermissionGranted,
+                is ShizukuState.BinderConnected,
+                is ShizukuState.ShellFailed -> {
                     Button(
                         onClick = onRequestPermission,
                         modifier = Modifier
@@ -226,13 +228,14 @@ fun ShizukuSetupScreen(
                         Icon(imageVector = Icons.Default.Security, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (status.state == ShizukuState.PERMISSION_REVOKED) "RE-AUTHORIZE PERMISSION" else "AUTHORIZE SHIZUKU",
+                            text = if (status.wasPreviouslyAuthorized) "RE-AUTHORIZE PERMISSION" else "AUTHORIZE SHIZUKU",
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                ShizukuState.SHIZUKU_NOT_RUNNING -> {
+                is ShizukuState.InstalledServiceStopped,
+                is ShizukuState.BinderDead -> {
                     Button(
                         onClick = {
                             val intent = context.packageManager.getLaunchIntentForPackage(ShizukuManager.SHIZUKU_PACKAGE)
@@ -252,7 +255,7 @@ fun ShizukuSetupScreen(
                     }
                 }
 
-                ShizukuState.SHIZUKU_UNAVAILABLE -> {
+                is ShizukuState.NotInstalled -> {
                     Button(
                         onClick = {
                             val intent = Intent(

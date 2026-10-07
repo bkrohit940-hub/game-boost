@@ -4,10 +4,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <queries>
-        <!-- Shizuku Manager -->
+        <!-- Shizuku Manager & Service Provider -->
         <package android:name="moe.shizuku.privileged.api" />
+        <provider android:authorities="moe.shizuku.privileged.api.provider" />
 
         <!-- PUBG Mobile Global -->
         <package android:name="com.tencent.ig" />
@@ -48,6 +50,15 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Gaming display 120Hz lock and reversible system restore" />
         </service>
+
+        <!-- Shizuku ContentProvider: Critical IPC entry point for Shizuku Binder sharing -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
     </application>
 

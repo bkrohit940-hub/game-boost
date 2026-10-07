@@ -32,7 +32,7 @@ android {
     }
     buildFeatures {
       compose = true
-      aidl = false
+      aidl = true
       buildConfig = false
       shaders = false
     }
@@ -90,6 +90,7 @@ dependencies {
   // Shizuku
   implementation(libs.shizuku.api)
   implementation(libs.shizuku.provider)
+  implementation(libs.shizuku.aidl)
 
   // DataStore
   implementation(libs.androidx.datastore.preferences)

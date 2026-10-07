@@ -170,11 +170,14 @@ fun DashboardScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val badgeState = when (shizukuStatus.state) {
-                                ShizukuState.SHIZUKU_READY -> BadgeState.SUCCESS
-                                ShizukuState.SHIZUKU_NOT_RUNNING -> BadgeState.WARNING
-                                ShizukuState.PERMISSION_REQUIRED,
-                                ShizukuState.PERMISSION_REVOKED -> BadgeState.ERROR
-                                ShizukuState.SHIZUKU_UNAVAILABLE -> BadgeState.NEUTRAL
+                                is ShizukuState.ShellVerified -> BadgeState.SUCCESS
+                                is ShizukuState.InstalledServiceStopped,
+                                is ShizukuState.BinderDead -> BadgeState.WARNING
+                                is ShizukuState.ServiceRunningPermissionMissing,
+                                is ShizukuState.ShellFailed -> BadgeState.ERROR
+                                is ShizukuState.PermissionGranted,
+                                is ShizukuState.BinderConnected -> BadgeState.INFO
+                                is ShizukuState.NotInstalled -> BadgeState.NEUTRAL
                             }
                             StatusBadge(
                                 text = if (shizukuStatus.isReady) "READY" else "SHIZUKU",
