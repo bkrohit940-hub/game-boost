@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
@@ -32,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -42,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -582,4 +586,340 @@ fun ThermalRiskDialog(
             }
         }
     )
+}
+
+// ==========================================
+// 10. REUSABLE SYSTEM & GAMING COMPONENTS
+// ==========================================
+
+@Composable
+fun StatusPill(
+    text: String,
+    state: BadgeState,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val (bg, fg) = when (state) {
+        BadgeState.SUCCESS -> Pair(StatusReadyContainer, StatusReady)
+        BadgeState.WARNING -> Pair(StatusWarningContainer, StatusWarning)
+        BadgeState.ERROR -> Pair(StatusDangerContainer, StatusDanger)
+        BadgeState.INFO -> Pair(AccentPrimaryContainer, AccentPrimary)
+        BadgeState.NEUTRAL -> Pair(SurfaceElevated, TextSecondary)
+    }
+
+    Surface(
+        modifier = modifier.then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
+        shape = RoundedCornerShape(8.dp),
+        color = bg,
+        border = BorderStroke(1.dp, fg.copy(alpha = 0.35f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(fg)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text.uppercase(),
+                color = fg,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ConnectionStatus(
+    backendType: com.gameboost.optimizer.system.BackendType,
+    isReady: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val (badgeText, badgeState) = when {
+        backendType == com.gameboost.optimizer.system.BackendType.SHIZUKU && isReady -> Pair("SHIZUKU", BadgeState.SUCCESS)
+        backendType == com.gameboost.optimizer.system.BackendType.WIRELESS_ADB && isReady -> Pair("WIRELESS ADB", BadgeState.INFO)
+        backendType == com.gameboost.optimizer.system.BackendType.SHIZUKU -> Pair("SHIZUKU NOT READY", BadgeState.WARNING)
+        backendType == com.gameboost.optimizer.system.BackendType.WIRELESS_ADB -> Pair("ADB CONNECTING", BadgeState.WARNING)
+        else -> Pair("UNPRIVILEGED", BadgeState.NEUTRAL)
+    }
+
+    StatusPill(
+        text = badgeText,
+        state = badgeState,
+        modifier = modifier,
+        onClick = onClick
+    )
+}
+
+@Composable
+fun TelemetryItem(
+    label: String,
+    value: String,
+    icon: ImageVector? = null,
+    accentColor: Color = AccentPrimary,
+    modifier: Modifier = Modifier
+) {
+    MetricChip(
+        label = label,
+        value = value,
+        icon = icon,
+        accentColor = accentColor,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun RefreshRateSelector(
+    currentRate: Float,
+    selectedTarget: Float,
+    supportedRates: List<Float>,
+    onSelectRate: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val options = remember(supportedRates) {
+        val rates = mutableListOf(0f)
+        if (supportedRates.any { it in 59f..61f }) rates.add(60f)
+        if (supportedRates.any { it in 89f..91f }) rates.add(90f)
+        if (supportedRates.any { it in 119f..121f }) rates.add(120f)
+        if (supportedRates.any { it in 143f..145f }) rates.add(144f)
+        rates.distinct()
+    }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        options.forEach { rate ->
+            val isSelected = (selectedTarget == rate) || (rate == 0f && selectedTarget <= 0f)
+            val label = if (rate <= 0f) "AUTO MAX" else "${rate.toInt()}Hz"
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onSelectRate(rate) },
+                shape = RoundedCornerShape(10.dp),
+                color = if (isSelected) AccentPrimaryContainer else SurfaceElevated,
+                border = BorderStroke(
+                    1.dp,
+                    if (isSelected) BorderActive else BorderSubtle
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) AccentPrimary else TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileSelector(
+    selectedMode: PerformanceMode,
+    onModeSelected: (PerformanceMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PerformanceModeSelector(
+        selectedMode = selectedMode,
+        onModeSelected = onModeSelected,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun OptimizationRow(
+    title: String,
+    status: String,
+    isSuccess: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            Icon(
+                imageVector = if (isSuccess) Icons.Default.Check else Icons.Default.Close,
+                contentDescription = null,
+                tint = if (isSuccess) StatusReady else StatusWarning,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                color = TextSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Text(
+            text = status,
+            color = if (isSuccess) TextPrimary else StatusWarning,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+fun HeroGameCard(
+    game: com.gameboost.optimizer.models.GameProfile,
+    isSelected: Boolean,
+    isOptimized: Boolean,
+    isBoosting: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val borderColor = when {
+        isOptimized -> StatusReady
+        isSelected -> BorderActive
+        else -> BorderSubtle
+    }
+
+    Card(
+        modifier = modifier
+            .width(260.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) SurfaceElevated else SurfaceCard
+        ),
+        border = BorderStroke(
+            width = if (isSelected || isOptimized) 1.5.dp else 1.dp,
+            color = borderColor
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                GameIconView(
+                    packageName = game.activePackageName,
+                    isInstalled = game.isInstalled,
+                    sizeDp = 56.dp
+                )
+
+                val (badgeText, badgeState) = when {
+                    !game.isInstalled -> Pair("NOT INSTALLED", BadgeState.NEUTRAL)
+                    isOptimized -> Pair("BOOSTED", BadgeState.SUCCESS)
+                    else -> Pair("READY", BadgeState.SUCCESS)
+                }
+                StatusBadge(text = badgeText, state = badgeState)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = game.displayName,
+                color = TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.5.sp,
+                maxLines = 1
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "${game.region} • ${game.activePackageName}",
+                color = TextTertiary,
+                fontSize = 11.sp,
+                maxLines = 1
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(
+                        when {
+                            isOptimized -> StatusReady
+                            isSelected -> AccentPrimary
+                            else -> Color.Transparent
+                        }
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+fun TurboIgniteButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    isBoosting: Boolean = false,
+    text: String = "TURBO IGNITE & PLAY",
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isBoosting,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(58.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AccentPrimary,
+            contentColor = DarkBg,
+            disabledContainerColor = SurfaceElevated,
+            disabledContentColor = TextTertiary
+        ),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        if (isBoosting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = DarkBg,
+                strokeWidth = 2.5.dp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "IGNITING TURBO...",
+                fontWeight = FontWeight.Black,
+                fontSize = 14.sp,
+                letterSpacing = 1.sp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Bolt,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                fontWeight = FontWeight.Black,
+                fontSize = 14.sp,
+                letterSpacing = 1.sp
+            )
+        }
+    }
 }

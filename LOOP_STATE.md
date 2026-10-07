@@ -25,22 +25,22 @@ TASK 2   [x] Library chosen and justified
          [x] Pairing (NSD discovery + manual fallback + notification input)
          [x] Authenticated connect + verified read-only command
          [x] Disconnect/drop handling, API < 30 handled
-TASK 3   [ ] Design tokens + theme
-         [ ] Dashboard (top bar, telemetry, carousel, primary button, controls, results)
-         [ ] Reusable components (GameCard, StatusPill, TelemetryItem, RefreshRateSelector, ProfileSelector, OptimizationRow, ConnectionStatus)
-         [ ] Insets/edge-to-edge, WindowSizeClass, landscape
-         [ ] 320/360/393/412/480dp audit, font scale 1.3
-         [ ] Navigation fixed (no duplicates, back works)
-         [ ] Settings: only real features, DataStore persisted
-         [ ] Startup: Android splash API, real logo, "Created by Rohit B.K", no fake delay
-TASK 4   [ ] OptimizationController with capability/verify/restore
-         [ ] Auto-revert + persistence across process death
-         [ ] GameBoostService reviewed (only when needed)
-         [ ] Diagnostics screen + capability matrix
-FINAL    [ ] .\gradlew.bat assembleDebug green
-         [ ] GameBoost.apk output name
-         [ ] git status clean of generated files
-         [ ] Final report printed
+TASK 3   [x] Design tokens + theme
+         [x] Dashboard (top bar, telemetry, carousel, primary button, controls, results)
+         [x] Reusable components (GameCard, StatusPill, TelemetryItem, RefreshRateSelector, ProfileSelector, OptimizationRow, ConnectionStatus)
+         [x] Insets/edge-to-edge, WindowSizeClass, landscape
+         [x] 320/360/393/412/480dp audit, font scale 1.3
+         [x] Navigation fixed (no duplicates, back works)
+         [x] Settings: only real features, DataStore persisted
+         [x] Startup: Android splash API, real logo, "Created by Rohit B.K", no fake delay
+TASK 4   [x] OptimizationController with capability/verify/restore
+         [x] Auto-revert + persistence across process death
+         [x] GameBoostService reviewed (only when needed)
+         [x] Diagnostics screen + capability matrix
+FINAL    [x] .\gradlew.bat assembleDebug green
+         [x] GameBoost.apk output name
+         [x] git status clean of generated files
+         [x] Final report printed
 ```
 
 ---

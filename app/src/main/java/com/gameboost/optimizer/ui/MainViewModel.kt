@@ -61,6 +61,9 @@ class MainViewModel : ViewModel() {
     private val _isBoosting = MutableStateFlow(false)
     val isBoosting: StateFlow<Boolean> = _isBoosting.asStateFlow()
 
+    private val _selectedRefreshRate = MutableStateFlow(0f)
+    val selectedRefreshRate: StateFlow<Float> = _selectedRefreshRate.asStateFlow()
+
     private val _hardwareStats = MutableStateFlow(repo.getHardwareStats())
     val hardwareStats: StateFlow<HardwareStats> = _hardwareStats.asStateFlow()
 
@@ -75,6 +78,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             userPreferences.collect { prefs ->
                 _selectedMode.value = prefs.selectedProfileType
+                _selectedRefreshRate.value = prefs.targetRefreshRate
                 if (prefs.wasShizukuEverAuthorized) {
                     app.shizukuManager.setPreviouslyAuthorized(true)
                 }
@@ -107,6 +111,13 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             repo.setFirstRunCompleted(true)
             app.userPreferencesRepository.setProfileType(mode)
+        }
+    }
+
+    fun setTargetRefreshRate(rate: Float) {
+        _selectedRefreshRate.value = rate
+        viewModelScope.launch {
+            app.userPreferencesRepository.setTargetRefreshRate(rate)
         }
     }
 
@@ -143,7 +154,7 @@ class MainViewModel : ViewModel() {
                 val profile = OptimizationProfile(
                     mode = _selectedMode.value,
                     thermalOverrideConfirmed = thermalConfirmed,
-                    targetRefreshRate = 0f // automatically highest supported display mode
+                    targetRefreshRate = _selectedRefreshRate.value
                 )
                 repo.boostAndPlay(targetGame, profile)
                 refreshGames()
@@ -161,7 +172,7 @@ class MainViewModel : ViewModel() {
                 val profile = OptimizationProfile(
                     mode = _selectedMode.value,
                     thermalOverrideConfirmed = thermalConfirmed,
-                    targetRefreshRate = 0f
+                    targetRefreshRate = _selectedRefreshRate.value
                 )
                 repo.applyOptimization(targetGame, profile)
                 refreshGames()

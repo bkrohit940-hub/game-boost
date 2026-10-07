@@ -47,6 +47,8 @@ fun MainNavigation(
     val isTestingBackend by viewModel.isTestingBackend.collectAsState()
     val adbOperationStatus by viewModel.adbOperationStatus.collectAsState()
 
+    val selectedRefreshRate by viewModel.selectedRefreshRate.collectAsState()
+
     // Clean, fast startup branding: starts with StartupKey
     val backStack = rememberNavBackStack(StartupKey)
     val currentKey = backStack.lastOrNull() ?: HomeKey
@@ -81,7 +83,6 @@ fun MainNavigation(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .safeDrawingPadding()
         ) {
             NavDisplay(
                 backStack = backStack,
@@ -132,6 +133,7 @@ fun MainNavigation(
                     entry<HomeKey> {
                         DashboardScreen(
                             shizukuStatus = shizukuStatus,
+                            privilegedState = privilegedState,
                             isOptimized = isOptimized,
                             activeGameProfile = activeGame,
                             lastResult = lastResult,
@@ -141,9 +143,12 @@ fun MainNavigation(
                             userPreferences = userPrefs,
                             selectedMode = selectedMode,
                             selectedGameId = selectedGameId,
+                            selectedRefreshRate = selectedRefreshRate,
+                            supportedRefreshRates = viewModel.capabilities.displayState.supportedRefreshRates,
                             isBoosting = isBoosting,
                             onSelectGame = { viewModel.selectGame(it) },
                             onSelectMode = { viewModel.setPerformanceMode(it) },
+                            onSelectRefreshRate = { viewModel.setTargetRefreshRate(it) },
                             onBoostAndPlay = { id, thermal -> viewModel.boostAndPlay(id, thermal) },
                             onBoostOnly = { id, thermal -> viewModel.boostOnly(id, thermal) },
                             onPlayOnly = { id -> viewModel.launchGame(id) },
@@ -169,6 +174,7 @@ fun MainNavigation(
                         // Compatibility redirect to Home
                         DashboardScreen(
                             shizukuStatus = shizukuStatus,
+                            privilegedState = privilegedState,
                             isOptimized = isOptimized,
                             activeGameProfile = activeGame,
                             lastResult = lastResult,
@@ -178,9 +184,12 @@ fun MainNavigation(
                             userPreferences = userPrefs,
                             selectedMode = selectedMode,
                             selectedGameId = selectedGameId,
+                            selectedRefreshRate = selectedRefreshRate,
+                            supportedRefreshRates = viewModel.capabilities.displayState.supportedRefreshRates,
                             isBoosting = isBoosting,
                             onSelectGame = { viewModel.selectGame(it) },
                             onSelectMode = { viewModel.setPerformanceMode(it) },
+                            onSelectRefreshRate = { viewModel.setTargetRefreshRate(it) },
                             onBoostAndPlay = { id, thermal -> viewModel.boostAndPlay(id, thermal) },
                             onBoostOnly = { id, thermal -> viewModel.boostOnly(id, thermal) },
                             onPlayOnly = { id -> viewModel.launchGame(id) },

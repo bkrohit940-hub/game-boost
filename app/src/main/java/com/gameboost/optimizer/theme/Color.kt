@@ -8,41 +8,41 @@ import androidx.compose.ui.graphics.Color
 // ==========================================
 
 // Surfaces & Backgrounds
-val DarkBg = Color(0xFF0C0E12)
-val SurfaceCard = Color(0xFF141820)
-val SurfaceElevated = Color(0xFF1B212D)
-val SurfaceCardActive = Color(0xFF1E2534)
+val DarkBg = Color(0xFF0B0D10)
+val SurfaceCard = Color(0xFF14181D)
+val SurfaceElevated = Color(0xFF1B2027)
+val SurfaceCardActive = Color(0xFF222933)
 
 // Borders & Dividers
-val BorderSubtle = Color(0xFF232A38)
-val BorderHighlight = Color(0xFF333E52)
-val BorderActive = Color(0xFF38BDF8)
+val BorderSubtle = Color(0xFF232A34)
+val BorderHighlight = Color(0xFF333E50)
+val BorderActive = Color(0xFF19D3F3)
 
-// Accents (Clean, non-neon, technical precision)
-val AccentPrimary = Color(0xFF38BDF8)       // Ice / Titanium Blue
-val AccentPrimaryDim = Color(0xFF0284C7)
-val AccentPrimaryContainer = Color(0xFF0C2436)
+// Accents (Cyan / RedMagic Gaming Turbo)
+val AccentPrimary = Color(0xFF19D3F3)       // Precision Cyan
+val AccentPrimaryDim = Color(0xFF0891B2)
+val AccentPrimaryContainer = Color(0xFF0D2836)
 
-val AccentSecondary = Color(0xFF94A3B8)
-val AccentSecondaryContainer = Color(0xFF1E293B)
+val AccentSecondary = Color(0xFF8B95A5)
+val AccentSecondaryContainer = Color(0xFF1E2430)
 
 // Status & Verification (Accurate, high-readability)
-val StatusReady = Color(0xFF10B981)         // Emerald
-val StatusReadyContainer = Color(0xFF0B291D)
+val StatusReady = Color(0xFF3DDC84)         // Android Green
+val StatusReadyContainer = Color(0xFF0D2E1C)
 
 val StatusWarning = Color(0xFFF59E0B)       // Amber
 val StatusWarningContainer = Color(0xFF2D200A)
 
-val StatusDanger = Color(0xFFEF4444)        // Crimson
-val StatusDangerContainer = Color(0xFF2E1217)
+val StatusDanger = Color(0xFFE5383B)        // Crimson / Turbo Red
+val StatusDangerContainer = Color(0xFF321215)
 
-val StatusNeutral = Color(0xFF64748B)       // Slate
-val StatusNeutralContainer = Color(0xFF18202F)
+val StatusNeutral = Color(0xFF8B95A5)       // Slate
+val StatusNeutralContainer = Color(0xFF171C24)
 
 // High-contrast clean typography
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextTertiary = Color(0xFF64748B)
+val TextPrimary = Color(0xFFF4F6F8)
+val TextSecondary = Color(0xFF8B95A5)
+val TextTertiary = Color(0xFF5A6474)
 
 // Compatibility aliases for existing components
 val ObsidianBg = DarkBg

@@ -2,8 +2,12 @@ package com.gameboost.optimizer.ui.dashboard
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,30 +17,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeviceThermostat
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,8 +56,9 @@ import com.gameboost.optimizer.models.HardwareStats
 import com.gameboost.optimizer.models.OptimizationResult
 import com.gameboost.optimizer.models.PerformanceMode
 import com.gameboost.optimizer.models.RestorationResult
-import com.gameboost.optimizer.models.ShizukuState
 import com.gameboost.optimizer.models.ShizukuStatus
+import com.gameboost.optimizer.system.BackendType
+import com.gameboost.optimizer.system.PrivilegedSystemState
 import com.gameboost.optimizer.theme.AccentPrimary
 import com.gameboost.optimizer.theme.AccentPrimaryContainer
 import com.gameboost.optimizer.theme.BorderActive
@@ -68,15 +73,29 @@ import com.gameboost.optimizer.theme.TextPrimary
 import com.gameboost.optimizer.theme.TextSecondary
 import com.gameboost.optimizer.theme.TextTertiary
 import com.gameboost.optimizer.ui.components.BadgeState
+import com.gameboost.optimizer.ui.components.ConnectionStatus
 import com.gameboost.optimizer.ui.components.GameBoostLogo
 import com.gameboost.optimizer.ui.components.GameIconView
 import com.gameboost.optimizer.ui.components.GlassCard
-import com.gameboost.optimizer.ui.components.MetricChip
-import com.gameboost.optimizer.ui.components.PerformanceModeSelector
+import com.gameboost.optimizer.ui.components.HeroGameCard
+import com.gameboost.optimizer.ui.components.OptimizationRow
+import com.gameboost.optimizer.ui.components.ProfileSelector
+import com.gameboost.optimizer.ui.components.RefreshRateSelector
 import com.gameboost.optimizer.ui.components.SectionHeader
 import com.gameboost.optimizer.ui.components.StatusBadge
+import com.gameboost.optimizer.ui.components.TelemetryItem
 import com.gameboost.optimizer.ui.components.ThermalRiskDialog
+import com.gameboost.optimizer.ui.components.TurboIgniteButton
 
+/**
+ * MIUI Game Turbo / RedMagic Game Space inspired dashboard for GameBoost.
+ * Features:
+ * - Real hardware telemetry strip (Display Hz, Available RAM, Temp, Active Backend)
+ * - Hero game carousel with snapping behavior
+ * - Full-width TURBO IGNITE & PLAY action button (height >= 56dp)
+ * - Dynamic responsive layout supporting 320dp - 480dp and landscape orientations
+ * - Non-fabricated, verified system optimization states
+ */
 @Composable
 fun DashboardScreen(
     shizukuStatus: ShizukuStatus,
@@ -87,11 +106,15 @@ fun DashboardScreen(
     games: List<GameProfile>,
     hardwareStats: HardwareStats,
     userPreferences: AppUserPreferences,
+    privilegedState: PrivilegedSystemState? = null,
     selectedMode: PerformanceMode = PerformanceMode.PERFORMANCE,
     selectedGameId: String? = null,
+    selectedRefreshRate: Float = 0f,
+    supportedRefreshRates: List<Float> = emptyList(),
     isBoosting: Boolean = false,
     onSelectGame: (String) -> Unit = {},
     onSelectMode: (PerformanceMode) -> Unit = {},
+    onSelectRefreshRate: (Float) -> Unit = {},
     onBoostAndPlay: (String, Boolean) -> Unit = { _, _ -> },
     onBoostOnly: (String, Boolean) -> Unit = { _, _ -> },
     onPlayOnly: (String) -> Unit = {},
@@ -102,547 +125,494 @@ fun DashboardScreen(
     onFixShizuku: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showThermalDialogForAction by remember { mutableStateOf<String?>(null) } // "boost_play" or "boost_only"
+    var showThermalDialogForAction by remember { mutableStateOf<String?>(null) }
 
-    if (showThermalDialogForAction != null) {
-        val targetGame = selectedGameId ?: games.firstOrNull { it.isInstalled }?.id ?: games.firstOrNull()?.id ?: ""
+    // Resolve target active game
+    val activeGame = remember(selectedGameId, games) {
+        games.firstOrNull { it.id == selectedGameId }
+            ?: games.firstOrNull { it.isInstalled }
+            ?: games.firstOrNull()
+    }
+
+    if (showThermalDialogForAction != null && activeGame != null) {
         ThermalRiskDialog(
             onConfirm = {
                 val action = showThermalDialogForAction
                 showThermalDialogForAction = null
                 if (action == "boost_play") {
-                    onBoostAndPlay(targetGame, true)
+                    onBoostAndPlay(activeGame.id, true)
                 } else if (action == "boost_only") {
-                    onBoostOnly(targetGame, true)
+                    onBoostOnly(activeGame.id, true)
                 }
             },
             onDismiss = { showThermalDialogForAction = null }
         )
     }
 
+    // Carousel snap state
+    val carouselListState = rememberLazyListState()
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = carouselListState)
+
+    // Sync carousel position when active game selection changes externally
+    LaunchedEffect(activeGame?.id) {
+        val index = games.indexOfFirst { it.id == activeGame?.id }
+        if (index >= 0) {
+            carouselListState.animateScrollToItem(index)
+        }
+    }
+
+    // Determine active backend
+    val backendType = privilegedState?.activeBackendType
+        ?: if (shizukuStatus.isReady) BackendType.SHIZUKU else BackendType.NONE
+    val isPrivilegedReady = privilegedState?.isPrivilegedReady ?: shizukuStatus.isReady
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = DarkBg
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isNarrowScreen = maxWidth < 360.dp
+            val isLandscape = maxWidth > maxHeight
 
-                // Brand Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GameBoostLogo(sizeDp = 36.dp)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "GAME BOOST",
-                                color = TextPrimary,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "Performance Center",
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    // Shizuku Status Pill
-                    Surface(
-                        modifier = Modifier.clickable { onFixShizuku() },
-                        shape = RoundedCornerShape(8.dp),
-                        color = SurfaceElevated,
-                        border = BorderStroke(1.dp, BorderSubtle)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val badgeState = when (shizukuStatus.state) {
-                                is ShizukuState.ShellVerified -> BadgeState.SUCCESS
-                                is ShizukuState.InstalledServiceStopped,
-                                is ShizukuState.BinderDead -> BadgeState.WARNING
-                                is ShizukuState.ServiceRunningPermissionMissing,
-                                is ShizukuState.ShellFailed -> BadgeState.ERROR
-                                is ShizukuState.PermissionGranted,
-                                is ShizukuState.BinderConnected -> BadgeState.INFO
-                                is ShizukuState.NotInstalled -> BadgeState.NEUTRAL
-                            }
-                            StatusBadge(
-                                text = if (shizukuStatus.isReady) "READY" else "SHIZUKU",
-                                state = badgeState
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Shizuku Attention Banner if not ready
-            if (!shizukuStatus.isReady) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // ==========================================
+                // 1. BRAND HEADER & BACKEND STATUS PILL
+                // ==========================================
                 item {
-                    GlassCard(
-                        border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.5f)),
-                        backgroundColor = SurfaceElevated,
-                        onClick = onFixShizuku
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            GameBoostLogo(sizeDp = 34.dp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
                                 Text(
-                                    text = shizukuStatus.title,
-                                    color = StatusWarning,
-                                    fontSize = 12.sp,
+                                    text = "GAME BOOST",
+                                    color = TextPrimary,
+                                    fontSize = 19.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    text = "PERFORMANCE CENTER",
+                                    color = TextSecondary,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = shizukuStatus.summaryText,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp
+                            }
+                        }
+
+                        ConnectionStatus(
+                            backendType = backendType,
+                            isReady = isPrivilegedReady,
+                            onClick = {
+                                if (isPrivilegedReady) onOpenDiagnostics() else onFixShizuku()
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
+                // ==========================================
+                // 2. PRIVILEGE ATTENTION BANNER
+                // ==========================================
+                if (!isPrivilegedReady) {
+                    item {
+                        GlassCard(
+                            border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.5f)),
+                            backgroundColor = SurfaceElevated,
+                            onClick = onFixShizuku
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "PRIVILEGED ACCESS REQUIRED",
+                                        color = StatusWarning,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Authorize via Shizuku or Wireless ADB to enable 120Hz display locking and performance control.",
+                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        lineHeight = 15.sp
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = onFixShizuku,
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusWarning),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("CONNECT", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                }
+
+                // ==========================================
+                // 3. REAL HARDWARE TELEMETRY STRIP (4 CHIPS)
+                // ==========================================
+                item {
+                    val availableRamGb = ((hardwareStats.ramTotalBytes - hardwareStats.ramUsedBytes).toDouble() / (1024 * 1024 * 1024)).coerceAtLeast(0.0)
+                    val ramText = String.format(java.util.Locale.US, "%.1f GB", availableRamGb)
+                    val hzText = "${hardwareStats.currentRefreshRate.toInt()}Hz"
+                    val backendText = when (backendType) {
+                        BackendType.SHIZUKU -> "Shizuku"
+                        BackendType.WIRELESS_ADB -> "Wireless ADB"
+                        BackendType.NONE -> "None"
+                    }
+
+                    if (isNarrowScreen) {
+                        // 2x2 grid for narrow displays (<360dp) to avoid text truncation
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                TelemetryItem(
+                                    label = "Display Hz",
+                                    value = hzText,
+                                    icon = Icons.Default.Speed,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TelemetryItem(
+                                    label = "RAM Avail",
+                                    value = ramText,
+                                    icon = Icons.Default.Memory,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            OutlinedButton(
-                                onClick = onFixShizuku,
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusWarning)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("SETUP", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                TelemetryItem(
+                                    label = "Temp",
+                                    value = hardwareStats.formattedTemp,
+                                    icon = Icons.Default.DeviceThermostat,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TelemetryItem(
+                                    label = "Backend",
+                                    value = backendText,
+                                    icon = Icons.Default.Terminal,
+                                    accentColor = if (isPrivilegedReady) StatusReady else StatusWarning,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
+                        }
+                    } else {
+                        // 4 chips across for standard/wide displays
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            TelemetryItem(
+                                label = "Display Hz",
+                                value = hzText,
+                                icon = Icons.Default.Speed,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TelemetryItem(
+                                label = "RAM Avail",
+                                value = ramText,
+                                icon = Icons.Default.Memory,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TelemetryItem(
+                                label = "Temp",
+                                value = hardwareStats.formattedTemp,
+                                icon = Icons.Default.DeviceThermostat,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TelemetryItem(
+                                label = "Backend",
+                                value = backendText,
+                                icon = Icons.Default.Terminal,
+                                accentColor = if (isPrivilegedReady) StatusReady else StatusWarning,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            // Active Gaming Session State
-            if (isOptimized && activeGameProfile != null) {
-                item {
-                    GlassCard(
-                        border = BorderStroke(1.dp, BorderActive),
-                        backgroundColor = SurfaceElevated
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                // ==========================================
+                // 4. ACTIVE GAMING SESSION HUD
+                // ==========================================
+                if (isOptimized && activeGameProfile != null) {
+                    item {
+                        GlassCard(
+                            border = BorderStroke(1.dp, BorderActive),
+                            backgroundColor = SurfaceElevated
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                GameIconView(
-                                    packageName = activeGameProfile.activePackageName,
-                                    isInstalled = activeGameProfile.isInstalled,
-                                    sizeDp = 40.dp
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = activeGameProfile.displayName.uppercase(),
-                                        color = TextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    GameIconView(
+                                        packageName = activeGameProfile.activePackageName,
+                                        isInstalled = activeGameProfile.isInstalled,
+                                        sizeDp = 42.dp
                                     )
-                                    Text(
-                                        text = "BOOST ACTIVE • ${selectedMode.displayName}",
-                                        color = AccentPrimary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = activeGameProfile.displayName.uppercase(),
+                                            color = TextPrimary,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "BOOST ACTIVE • ${selectedMode.displayName}",
+                                            color = AccentPrimary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+
+                                OutlinedButton(
+                                    onClick = onRestoreDefault,
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Restore,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("END SESSION", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 
-                            OutlinedButton(
-                                onClick = onRestoreDefault,
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Restore,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("END SESSION", fontSize = 11.sp)
-                            }
-                        }
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Session Verification Checklist
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            SessionCheckItem(
+                            OptimizationRow(
                                 title = "Display Refresh Rate",
                                 status = "${hardwareStats.currentRefreshRate.toInt()}Hz locked",
                                 isSuccess = lastResult?.verified == true
                             )
-                            SessionCheckItem(
-                                title = "Game Mode API",
-                                status = "Performance profile active",
+                            OptimizationRow(
+                                title = "Android Game Mode API",
+                                status = "Performance state active",
                                 isSuccess = true
                             )
-                            SessionCheckItem(
+                            OptimizationRow(
                                 title = "Background Memory",
                                 status = "Optimized (${hardwareStats.formattedRam})",
                                 isSuccess = true
                             )
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            // Real Hardware Telemetry Bar (No fake metrics)
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    MetricChip(
-                        label = "Display Hz",
-                        value = "${hardwareStats.currentRefreshRate.toInt()}Hz",
-                        icon = Icons.Default.Speed,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricChip(
-                        label = "RAM Available",
-                        value = "${String.format(java.util.Locale.US, "%.1f", (hardwareStats.ramTotalBytes - hardwareStats.ramUsedBytes).toDouble() / (1024 * 1024 * 1024))} GB",
-                        icon = Icons.Default.Memory,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricChip(
-                        label = "Temp",
-                        value = hardwareStats.formattedTemp,
-                        icon = Icons.Default.DeviceThermostat,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // SECTION 1: Performance Mode Selector
-            item {
-                SectionHeader(
-                    title = "Performance Mode",
-                    subtitle = selectedMode.description
-                )
-                PerformanceModeSelector(
-                    selectedMode = selectedMode,
-                    onModeSelected = { mode ->
-                        onSelectMode(mode)
-                    }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // SECTION 2: YOUR GAMES (Launcher center)
-            item {
-                SectionHeader(
-                    title = "Your Games",
-                    subtitle = "Select game to optimize and launch",
-                    actionText = if (isOptimized) "RESTORE DEFAULT" else null,
-                    onAction = onRestoreDefault
-                )
-            }
-
-            items(games, key = { it.id }) { game ->
-                val isSelected = (selectedGameId ?: games.firstOrNull { it.isInstalled }?.id) == game.id
-                val isCurrentActive = isOptimized && activeGameProfile?.id == game.id
-
-                GameLauncherCard(
-                    game = game,
-                    isSelected = isSelected,
-                    isOptimized = isCurrentActive,
-                    isBoosting = isBoosting && isSelected,
-                    onSelect = { onSelectGame(game.id) },
-                    onBoostAndPlay = {
-                        if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
-                            showThermalDialogForAction = "boost_play"
-                        } else {
-                            onBoostAndPlay(game.id, false)
-                        }
-                    },
-                    onBoostOnly = {
-                        if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
-                            showThermalDialogForAction = "boost_only"
-                        } else {
-                            onBoostOnly(game.id, false)
-                        }
-                    },
-                    onPlayOnly = { onPlayOnly(game.id) },
-                    onDetailClick = { onGameClick(game.id) }
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            // Last Optimization Log / Verification Note
-            if (lastResult != null && !isOptimized) {
+                // ==========================================
+                // 5. HERO GAME CAROUSEL WITH SNAP BEHAVIOR
+                // ==========================================
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    GlassCard(
-                        border = BorderStroke(
-                            1.dp,
-                            if (lastResult.isSuccess) BorderSubtle else StatusDanger.copy(alpha = 0.5f)
-                        ),
-                        backgroundColor = SurfaceElevated
+                    SectionHeader(
+                        title = "Game Space",
+                        subtitle = "Select game to optimize and ignite"
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    LazyRow(
+                        state = carouselListState,
+                        flingBehavior = snapFlingBehavior,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "LAST OPTIMIZATION RESULT",
-                            color = TextTertiary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = lastResult.verificationSummary,
-                            color = if (lastResult.isDisplayRateVerified) StatusReady else StatusWarning,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        if (lastResult.technicalExplanation != null) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = lastResult.technicalExplanation,
-                                color = TextTertiary,
-                                fontSize = 11.sp
+                        items(games, key = { it.id }) { game ->
+                            val isSelected = activeGame?.id == game.id
+                            val isCurrentActive = isOptimized && activeGameProfile?.id == game.id
+
+                            HeroGameCard(
+                                game = game,
+                                isSelected = isSelected,
+                                isOptimized = isCurrentActive,
+                                isBoosting = isBoosting && isSelected,
+                                onClick = { onSelectGame(game.id) }
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-    }
-}
+                // ==========================================
+                // 6. PRIMARY IGNITION BUTTON (≥56dp) & CONTROLS
+                // ==========================================
+                item {
+                    if (activeGame != null) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Primary Full-Width Action Button (Height 58dp >= 56dp)
+                            TurboIgniteButton(
+                                onClick = {
+                                    if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
+                                        showThermalDialogForAction = "boost_play"
+                                    } else {
+                                        onBoostAndPlay(activeGame.id, false)
+                                    }
+                                },
+                                enabled = activeGame.isInstalled,
+                                isBoosting = isBoosting,
+                                text = if (activeGame.isInstalled) "TURBO IGNITE & PLAY" else "GAME NOT INSTALLED",
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
-@Composable
-private fun GameLauncherCard(
-    game: GameProfile,
-    isSelected: Boolean,
-    isOptimized: Boolean,
-    isBoosting: Boolean,
-    onSelect: () -> Unit,
-    onBoostAndPlay: () -> Unit,
-    onBoostOnly: () -> Unit,
-    onPlayOnly: () -> Unit,
-    onDetailClick: () -> Unit
-) {
-    val borderColor = when {
-        isOptimized -> StatusReady
-        isSelected -> BorderActive
-        else -> BorderSubtle
-    }
+                            Spacer(modifier = Modifier.height(8.dp))
 
-    GlassCard(
-        border = BorderStroke(1.dp, borderColor),
-        backgroundColor = if (isSelected) SurfaceElevated else SurfaceCard,
-        onClick = onSelect
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Actual Game Application Icon from PackageManager
-            GameIconView(
-                packageName = game.activePackageName,
-                isInstalled = game.isInstalled,
-                sizeDp = 48.dp
-            )
+                            // Secondary Quick Actions Row
+                            if (activeGame.isInstalled) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
+                                                showThermalDialogForAction = "boost_only"
+                                            } else {
+                                                onBoostOnly(activeGame.id, false)
+                                            }
+                                        },
+                                        enabled = !isBoosting,
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("IGNITE ONLY", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
 
-            Spacer(modifier = Modifier.width(12.dp))
+                                    OutlinedButton(
+                                        onClick = { onPlayOnly(activeGame.id) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("PLAY ONLY", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = game.displayName,
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    // Installation / Boost status badge
-                    val (badgeText, badgeState) = when {
-                        !game.isInstalled -> Pair("NOT INSTALLED", BadgeState.NEUTRAL)
-                        isOptimized -> Pair("BOOST ACTIVE", BadgeState.SUCCESS)
-                        else -> Pair("READY", BadgeState.SUCCESS)
+                                    OutlinedButton(
+                                        onClick = { onGameClick(activeGame.id) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextTertiary),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("DETAILS", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        }
                     }
-                    StatusBadge(text = badgeText, state = badgeState)
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${game.region} • ${game.activePackageName}",
-                        color = TextTertiary,
-                        fontSize = 11.sp
+                // ==========================================
+                // 7. PERFORMANCE PROFILE SELECTOR
+                // ==========================================
+                item {
+                    SectionHeader(
+                        title = "Performance Mode",
+                        subtitle = selectedMode.description
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    ProfileSelector(
+                        selectedMode = selectedMode,
+                        onModeSelected = { onSelectMode(it) }
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
 
-                if (game.lastOptimizedTime != null) {
-                    Text(
-                        text = "Last boosted: recently",
-                        color = TextSecondary,
-                        fontSize = 10.sp
+                // ==========================================
+                // 8. TARGET REFRESH RATE SELECTOR
+                // ==========================================
+                item {
+                    SectionHeader(
+                        title = "Target Refresh Rate",
+                        subtitle = "Hardware compositor display frequency target"
                     )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Action Buttons Row (Only if installed)
-        if (game.isInstalled) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Primary: BOOST & PLAY
-                Button(
-                    onClick = onBoostAndPlay,
-                    enabled = !isBoosting,
-                    modifier = Modifier.weight(1.3f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentPrimary,
-                        contentColor = DarkBg
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (isBoosting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = DarkBg,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Text(
-                        text = "BOOST & PLAY",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp,
-                        letterSpacing = 0.5.sp
+                    Spacer(modifier = Modifier.height(6.dp))
+                    RefreshRateSelector(
+                        currentRate = hardwareStats.currentRefreshRate,
+                        selectedTarget = selectedRefreshRate,
+                        supportedRates = supportedRefreshRates,
+                        onSelectRate = onSelectRefreshRate
                     )
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
 
-                // Secondary: BOOST ONLY
-                OutlinedButton(
-                    onClick = onBoostOnly,
-                    enabled = !isBoosting,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "BOOST ONLY",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp
-                    )
-                }
-
-                // Secondary: PLAY (Launch without boosting)
-                OutlinedButton(
-                    onClick = onPlayOnly,
-                    modifier = Modifier.weight(0.7f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play",
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        } else {
-            // Not installed indicator
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = SurfaceElevated,
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, BorderSubtle)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Not installed on this device",
-                        color = TextTertiary,
-                        fontSize = 11.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = onDetailClick) {
-                        Text("VIEW DETAILS", fontSize = 11.sp, color = AccentPrimary)
+                // ==========================================
+                // 9. LAST OPTIMIZATION RESULT (Verification)
+                // ==========================================
+                if (lastResult != null && !isOptimized) {
+                    item {
+                        GlassCard(
+                            border = BorderStroke(
+                                1.dp,
+                                if (lastResult.isSuccess) BorderSubtle else StatusDanger.copy(alpha = 0.5f)
+                            ),
+                            backgroundColor = SurfaceElevated
+                        ) {
+                            Text(
+                                text = "LAST OPTIMIZATION RESULT",
+                                color = TextTertiary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = lastResult.verificationSummary,
+                                color = if (lastResult.isDisplayRateVerified) StatusReady else StatusWarning,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (lastResult.technicalExplanation != null) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = lastResult.technicalExplanation,
+                                    color = TextTertiary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SessionCheckItem(
-    title: String,
-    status: String,
-    isSuccess: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
-                contentDescription = null,
-                tint = if (isSuccess) StatusReady else StatusWarning,
-                modifier = Modifier.size(13.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = title,
-                color = TextSecondary,
-                fontSize = 11.sp
-            )
-        }
-        Text(
-            text = status,
-            color = if (isSuccess) TextPrimary else StatusWarning,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }

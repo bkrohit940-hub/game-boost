@@ -55,23 +55,22 @@ fun StartupScreen(
     val scaleAnim = remember { Animatable(0.95f) }
 
     LaunchedEffect(Unit) {
-        // Fast, subtle entrance animation (350ms)
+        // Snappy, professional entrance animation (200ms) - No artificial startup delay
         alphaAnim.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
         )
         scaleAnim.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
         )
 
-        // Hold briefly for clean professional branding (~850ms)
-        delay(850)
+        // Snappy transition to main app (100ms)
+        delay(100)
 
-        // Smooth transition out
         alphaAnim.animateTo(
             targetValue = 0f,
-            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing)
         )
 
         onFinished()

@@ -44,6 +44,32 @@ android {
     }
 }
 
+base {
+    archivesName.set("GameBoost")
+}
+
+abstract class CopyGameBoostApkTask : DefaultTask() {
+    @get:InputDirectory
+    abstract val apkDir: org.gradle.api.file.DirectoryProperty
+
+    @TaskAction
+    fun copyApk() {
+        val src = apkDir.file("GameBoost-debug.apk").get().asFile
+        if (src.exists()) {
+            val dst = apkDir.file("GameBoost.apk").get().asFile
+            src.copyTo(dst, overwrite = true)
+        }
+    }
+}
+
+val copyGameBoostApk = tasks.register<CopyGameBoostApkTask>("copyGameBoostApk") {
+    apkDir.set(layout.buildDirectory.dir("outputs/apk/debug"))
+}
+
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+    finalizedBy(copyGameBoostApk)
+}
+
 kotlin {
     jvmToolchain(17)
 }
