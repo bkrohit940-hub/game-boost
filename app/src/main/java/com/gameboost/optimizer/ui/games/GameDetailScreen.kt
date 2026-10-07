@@ -223,20 +223,20 @@ fun GameDetailScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Bolt,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "BOOST & PLAY",
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -255,7 +255,9 @@ fun GameDetailScreen(
                                 onApply(OptimizationProfile(mode = selectedMode))
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -265,14 +267,16 @@ fun GameDetailScreen(
                     if (onLaunch != null) {
                         OutlinedButton(
                             onClick = onLaunch,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("PLAY ONLY", fontSize = 12.sp)

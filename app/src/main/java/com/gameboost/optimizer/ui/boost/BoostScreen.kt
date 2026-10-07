@@ -55,6 +55,8 @@ import com.gameboost.optimizer.theme.TextPrimary
 import com.gameboost.optimizer.theme.TextSecondary
 import com.gameboost.optimizer.theme.TextTertiary
 import com.gameboost.optimizer.ui.components.BadgeState
+import com.gameboost.optimizer.ui.components.CapabilityRow
+import com.gameboost.optimizer.ui.components.CapabilityStatus
 import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.PerformanceModeSelector
 import com.gameboost.optimizer.ui.components.SectionHeader
@@ -103,118 +105,121 @@ fun BoostScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             SectionHeader(
-                title = "Optimization Center",
-                subtitle = "Configure system, memory, and performance parameters"
+                title = "PERFORMANCE CONTROL",
+                subtitle = "Tune hardware parameters and system profiles"
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 1. Performance Mode Selector
+            // ==========================================
+            // 1. CURRENT PROFILE: [ BALANCED ] [ PERFORMANCE ] [ EXTREME ]
+            // ==========================================
+            Text(
+                text = "CURRENT PROFILE",
+                color = TextTertiary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             GlassCard(backgroundColor = SurfaceElevated) {
-                Text(
-                    text = "SELECT PERFORMANCE PROFILE",
-                    color = TextTertiary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
                 PerformanceModeSelector(
                     selectedMode = selectedMode,
                     onModeSelected = { mode -> onSelectMode(mode) }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = selectedMode.description,
                     color = TextSecondary,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // 2. Automatic Display Mode Optimization
+            // ==========================================
+            // 2. OPTIMIZATION CAPABILITY STATUS
+            // ==========================================
+            SectionHeader(
+                title = "CAPABILITY BREAKDOWN",
+                subtitle = "Technical feasibility matrix on this device"
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
             GlassCard(backgroundColor = SurfaceElevated) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "DISPLAY REFRESH RATE",
-                            color = TextTertiary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Automatic Detection (${capabilities.displayState.maxRefreshRate.toInt()}Hz max panel)",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    StatusBadge(
-                        text = if (capabilities.displayState.supports120Hz) "120HZ PANEL" else "${capabilities.displayState.maxRefreshRate.toInt()}HZ PANEL",
-                        state = BadgeState.SUCCESS
-                    )
+                // Refresh Rate capability
+                val refreshRateStatus = when {
+                    isOptimized && lastResult?.isDisplayRateVerified == true -> CapabilityStatus.ACTIVE
+                    capabilities.displayState.supports120Hz || capabilities.displayState.supportedRefreshRates.isNotEmpty() -> CapabilityStatus.SUPPORTED
+                    else -> CapabilityStatus.NOT_SUPPORTED
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Manual refresh-rate selection has been replaced by automatic detection. Game Boost detects the maximum supported display mode from DisplayManager and verifies active rates with the Android compositor.",
-                    color = TextSecondary,
-                    fontSize = 11.sp
+                CapabilityRow(
+                    title = "Refresh Rate",
+                    status = refreshRateStatus,
+                    subtitle = "Locked compositor refresh rate (up to ${capabilities.displayState.maxRefreshRate.toInt()}Hz)"
                 )
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. Legitimate Gaming Memory Optimization
-            GlassCard(backgroundColor = SurfaceElevated) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "GAMING MEMORY OPTIMIZATION",
-                            color = TextTertiary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = hardwareStats.formattedRam,
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = StatusReady,
-                        modifier = Modifier.size(20.dp)
-                    )
+                // Game Mode capability
+                val gameModeStatus = when {
+                    capabilities.apiLevel < 31 -> CapabilityStatus.UNAVAILABLE
+                    isOptimized -> CapabilityStatus.ACTIVE
+                    else -> CapabilityStatus.SUPPORTED
                 }
+                CapabilityRow(
+                    title = "Game Mode",
+                    status = gameModeStatus,
+                    subtitle = if (capabilities.apiLevel >= 31) "Android 12+ GameMode API low-latency mode" else "Requires Android 12+ (API 31+)"
+                )
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Non-destructive background trimming via Android onTrimMemory. Critical services, Game Boost, Shizuku, and telephony remain protected.",
-                    color = TextSecondary,
-                    fontSize = 11.sp
+                // Process Priority capability (Legitimately unavailable without unsafe root)
+                CapabilityRow(
+                    title = "Process Priority",
+                    status = CapabilityStatus.UNAVAILABLE,
+                    subtitle = "Android security sandbox restricts foreign process scheduling"
+                )
+
+                // Thermal Control capability (Legitimately not available to bypass OEM thermal limits)
+                CapabilityRow(
+                    title = "Thermal Control",
+                    status = CapabilityStatus.NOT_SUPPORTED,
+                    subtitle = "OEM kernel thermal trip-points cannot be modified without unsafe exploits"
+                )
+
+                // Animation Scaling
+                val animStatus = when {
+                    !shizukuStatus.isReady -> CapabilityStatus.UNAVAILABLE
+                    isOptimized -> CapabilityStatus.ACTIVE
+                    else -> CapabilityStatus.SUPPORTED
+                }
+                CapabilityRow(
+                    title = "Animation Latency",
+                    status = animStatus,
+                    subtitle = "Window & animator duration scale reduction"
+                )
+
+                // Memory Trimming
+                CapabilityRow(
+                    title = "Memory Optimization",
+                    status = if (isOptimized) CapabilityStatus.ACTIVE else CapabilityStatus.SUPPORTED,
+                    subtitle = "Non-destructive onTrimMemory background process reclamation"
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Primary Apply / Restore Actions
+            // ==========================================
+            // 3. PRIMARY ACTIONS (CTA >= 56dp, min target >= 48dp)
+            // ==========================================
             val targetGame = selectedGameId ?: games.firstOrNull { it.isInstalled }?.id ?: games.firstOrNull()?.id ?: ""
+            val profileTitle = when (selectedMode) {
+                PerformanceMode.SAFE -> "BALANCED"
+                PerformanceMode.PERFORMANCE -> "PERFORMANCE"
+                PerformanceMode.AGGRESSIVE -> "EXTREME"
+                PerformanceMode.THERMAL_OVERRIDE -> "THERMAL OVERRIDE"
+            }
+
             Button(
                 onClick = {
                     if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
@@ -225,20 +230,20 @@ fun BoostScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "APPLY ${selectedMode.displayName.uppercase()} BOOST",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 13.sp,
+                    text = "APPLY $profileTitle BOOST",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp,
                     letterSpacing = 0.5.sp
                 )
             }
@@ -249,9 +254,9 @@ fun BoostScreen(
                 onClick = onRestoreDefaults,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Restore,
@@ -259,7 +264,11 @@ fun BoostScreen(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("RESTORE DEFAULT SETTINGS", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = "RESTORE DEFAULT SETTINGS",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

@@ -35,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,6 +80,7 @@ import com.gameboost.optimizer.ui.components.GameIconView
 import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.HeroGameCard
 import com.gameboost.optimizer.ui.components.OptimizationRow
+import com.gameboost.optimizer.ui.components.PrimaryBoostButton
 import com.gameboost.optimizer.ui.components.ProfileSelector
 import com.gameboost.optimizer.ui.components.RefreshRateSelector
 import com.gameboost.optimizer.ui.components.SectionHeader
@@ -181,7 +183,7 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 // ==========================================
-                // 1. BRAND HEADER & BACKEND STATUS PILL
+                // 1. BRAND HEADER & SETTINGS SHORTCUT
                 // ==========================================
                 item {
                     Spacer(modifier = Modifier.height(14.dp))
@@ -195,29 +197,42 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "GAME BOOST",
+                                    text = "GAMEBOOST",
                                     color = TextPrimary,
                                     fontSize = 19.sp,
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
-                                    text = "PERFORMANCE CENTER",
+                                    text = "Gaming Performance Utility",
                                     color = TextSecondary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
 
-                        ConnectionStatus(
-                            backendType = backendType,
-                            isReady = isPrivilegedReady,
-                            onClick = {
-                                if (isPrivilegedReady) onOpenDiagnostics() else onFixShizuku()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ConnectionStatus(
+                                backendType = backendType,
+                                isReady = isPrivilegedReady,
+                                onClick = {
+                                    if (isPrivilegedReady) onOpenDiagnostics() else onFixShizuku()
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            IconButton(
+                                onClick = onOpenSettings,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
-                        )
+                        }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                 }
@@ -268,20 +283,23 @@ fun DashboardScreen(
                 }
 
                 // ==========================================
-                // 3. REAL HARDWARE TELEMETRY STRIP (4 CHIPS)
+                // 3. QUICK TELEMETRY (4 TILES)
                 // ==========================================
                 item {
                     val availableRamGb = ((hardwareStats.ramTotalBytes - hardwareStats.ramUsedBytes).toDouble() / (1024 * 1024 * 1024)).coerceAtLeast(0.0)
-                    val ramText = String.format(java.util.Locale.US, "%.1f GB", availableRamGb)
-                    val hzText = "${hardwareStats.currentRefreshRate.toInt()}Hz"
-                    val backendText = when (backendType) {
-                        BackendType.SHIZUKU -> "Shizuku"
-                        BackendType.WIRELESS_ADB -> "Wireless ADB"
-                        BackendType.NONE -> "None"
+                    val ramVal = if (hardwareStats.ramTotalBytes > 0) String.format(java.util.Locale.US, "%.1f GB", availableRamGb) else "UNAVAILABLE"
+                    val hzVal = if (hardwareStats.currentRefreshRate > 0) "${hardwareStats.currentRefreshRate.toInt()} Hz" else "UNAVAILABLE"
+                    val backendVal = when {
+                        isPrivilegedReady && backendType == BackendType.SHIZUKU -> "SHIZUKU"
+                        isPrivilegedReady && backendType == BackendType.WIRELESS_ADB -> "WIRELESS ADB"
+                        else -> "UNAVAILABLE"
                     }
+                    val thermalVal = if (hardwareStats.batteryTemperatureCelsius > 0) {
+                        "${hardwareStats.thermalStatus} ${hardwareStats.formattedTemp}"
+                    } else "UNAVAILABLE"
 
                     if (isNarrowScreen) {
-                        // 2x2 grid for narrow displays (<360dp) to avoid text truncation
+                        // 2x2 grid for narrow displays (<360dp)
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -291,14 +309,14 @@ fun DashboardScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 TelemetryItem(
-                                    label = "Display Hz",
-                                    value = hzText,
+                                    label = "REFRESH",
+                                    value = hzVal,
                                     icon = Icons.Default.Speed,
                                     modifier = Modifier.weight(1f)
                                 )
                                 TelemetryItem(
-                                    label = "RAM Avail",
-                                    value = ramText,
+                                    label = "RAM",
+                                    value = ramVal,
                                     icon = Icons.Default.Memory,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -308,14 +326,14 @@ fun DashboardScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 TelemetryItem(
-                                    label = "Temp",
-                                    value = hardwareStats.formattedTemp,
+                                    label = "THERMAL",
+                                    value = thermalVal,
                                     icon = Icons.Default.DeviceThermostat,
                                     modifier = Modifier.weight(1f)
                                 )
                                 TelemetryItem(
-                                    label = "Backend",
-                                    value = backendText,
+                                    label = "BACKEND",
+                                    value = backendVal,
                                     icon = Icons.Default.Terminal,
                                     accentColor = if (isPrivilegedReady) StatusReady else StatusWarning,
                                     modifier = Modifier.weight(1f)
@@ -323,34 +341,34 @@ fun DashboardScreen(
                             }
                         }
                     } else {
-                        // 4 chips across for standard/wide displays
+                        // 4 tiles across for standard/wide displays
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TelemetryItem(
-                                label = "Display Hz",
-                                value = hzText,
+                                label = "REFRESH",
+                                value = hzVal,
                                 icon = Icons.Default.Speed,
                                 modifier = Modifier.weight(1f)
                             )
                             TelemetryItem(
-                                label = "RAM Avail",
-                                value = ramText,
+                                label = "BACKEND",
+                                value = backendVal,
+                                icon = Icons.Default.Terminal,
+                                accentColor = if (isPrivilegedReady) StatusReady else StatusWarning,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TelemetryItem(
+                                label = "RAM",
+                                value = ramVal,
                                 icon = Icons.Default.Memory,
                                 modifier = Modifier.weight(1f)
                             )
                             TelemetryItem(
-                                label = "Temp",
-                                value = hardwareStats.formattedTemp,
+                                label = "THERMAL",
+                                value = thermalVal,
                                 icon = Icons.Default.DeviceThermostat,
-                                modifier = Modifier.weight(1f)
-                            )
-                            TelemetryItem(
-                                label = "Backend",
-                                value = backendText,
-                                icon = Icons.Default.Terminal,
-                                accentColor = if (isPrivilegedReady) StatusReady else StatusWarning,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -433,12 +451,12 @@ fun DashboardScreen(
                 }
 
                 // ==========================================
-                // 5. HERO GAME CAROUSEL WITH SNAP BEHAVIOR
+                // 5. GAME CAROUSEL WITH SNAP BEHAVIOR
                 // ==========================================
                 item {
                     SectionHeader(
-                        title = "Game Space",
-                        subtitle = "Select game to optimize and ignite"
+                        title = "Supported Games",
+                        subtitle = "Select game to focus and configure"
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -466,13 +484,84 @@ fun DashboardScreen(
                 }
 
                 // ==========================================
-                // 6. PRIMARY IGNITION BUTTON (≥56dp) & CONTROLS
+                // 6. MAIN SECTION: SELECTED GAME DASHBOARD
                 // ==========================================
                 item {
                     if (activeGame != null) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            // Primary Full-Width Action Button (Height 58dp >= 56dp)
-                            TurboIgniteButton(
+                        SectionHeader(
+                            title = "Selected Game",
+                            subtitle = "Operational status and primary launch trigger"
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        GlassCard(
+                            border = BorderStroke(1.dp, if (activeGame.isInstalled) BorderActive else BorderSubtle),
+                            backgroundColor = SurfaceElevated
+                        ) {
+                            // Top Row: Game Icon, Names, Statuses
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                GameIconView(
+                                    packageName = activeGame.activePackageName,
+                                    isInstalled = activeGame.isInstalled,
+                                    sizeDp = 58.dp
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = activeGame.displayName,
+                                        color = TextPrimary,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = activeGame.activePackageName,
+                                        color = TextTertiary,
+                                        fontSize = 11.sp,
+                                        maxLines = 1
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    // Status badges row: installed state, backend connection, profile
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        StatusBadge(
+                                            text = if (activeGame.isInstalled) "INSTALLED" else "NOT INSTALLED",
+                                            state = if (activeGame.isInstalled) BadgeState.SUCCESS else BadgeState.NEUTRAL
+                                        )
+                                        val backendBadgeText = when {
+                                            isPrivilegedReady && backendType == BackendType.SHIZUKU -> "SHIZUKU"
+                                            isPrivilegedReady && backendType == BackendType.WIRELESS_ADB -> "WIRELESS ADB"
+                                            else -> "UNPRIVILEGED"
+                                        }
+                                        StatusBadge(
+                                            text = backendBadgeText,
+                                            state = if (isPrivilegedReady) BadgeState.INFO else BadgeState.WARNING
+                                        )
+                                        val profileLabel = when (selectedMode) {
+                                            PerformanceMode.SAFE -> "BALANCED"
+                                            PerformanceMode.PERFORMANCE -> "PERFORMANCE"
+                                            PerformanceMode.AGGRESSIVE -> "EXTREME"
+                                            PerformanceMode.THERMAL_OVERRIDE -> "OVERRIDE"
+                                        }
+                                        StatusBadge(
+                                            text = profileLabel,
+                                            state = if (selectedMode.isDangerous) BadgeState.ERROR else BadgeState.INFO
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Main CTA: BOOST & PLAY (Height 58dp >= 56dp)
+                            PrimaryBoostButton(
                                 onClick = {
                                     if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
                                         showThermalDialogForAction = "boost_play"
@@ -482,18 +571,32 @@ fun DashboardScreen(
                                 },
                                 enabled = activeGame.isInstalled,
                                 isBoosting = isBoosting,
-                                text = if (activeGame.isInstalled) "TURBO IGNITE & PLAY" else "GAME NOT INSTALLED",
+                                text = if (activeGame.isInstalled) "BOOST & PLAY" else "GAME NOT INSTALLED",
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Secondary Quick Actions Row
+                            // Secondary actions row: OPEN GAME, IGNITE ONLY, DETAILS
                             if (activeGame.isInstalled) {
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
+                                    OutlinedButton(
+                                        onClick = { onPlayOnly(activeGame.id) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("OPEN GAME", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+
                                     OutlinedButton(
                                         onClick = {
                                             if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
@@ -504,30 +607,15 @@ fun DashboardScreen(
                                         },
                                         enabled = !isBoosting,
                                         modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
-                                        Text("IGNITE ONLY", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = { onPlayOnly(activeGame.id) },
-                                        modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("PLAY ONLY", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("BOOST ONLY", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     }
 
                                     OutlinedButton(
                                         onClick = { onGameClick(activeGame.id) },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(0.9f),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextTertiary),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {

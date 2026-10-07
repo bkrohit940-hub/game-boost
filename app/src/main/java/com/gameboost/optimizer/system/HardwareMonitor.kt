@@ -5,16 +5,19 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Build
+import android.os.PowerManager
 import com.gameboost.optimizer.models.HardwareStats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import java.util.Locale
 
 /**
  * Lightweight hardware telemetry collector.
- * Emits hardware stats at battery-friendly intervals.
+ * Emits hardware stats using genuine Android system APIs at battery-friendly intervals.
  */
 class HardwareMonitor(
     private val context: Context,
@@ -22,6 +25,8 @@ class HardwareMonitor(
 ) {
     private val activityManager =
         context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    private val powerManager =
+        context.getSystemService(Context.POWER_SERVICE) as? PowerManager
 
     fun getHardwareStats(): HardwareStats {
         // Battery status
@@ -49,6 +54,34 @@ class HardwareMonitor(
         // Refresh rate
         val displayState = displayController.getDisplayState()
 
+        // Real Thermal Status via PowerManager (API 29+)
+        val thermalStatusStr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && powerManager != null) {
+            when (powerManager.currentThermalStatus) {
+                PowerManager.THERMAL_STATUS_NONE -> "NORMAL"
+                PowerManager.THERMAL_STATUS_LIGHT -> "LIGHT"
+                PowerManager.THERMAL_STATUS_MODERATE -> "MODERATE"
+                PowerManager.THERMAL_STATUS_SEVERE -> "SEVERE"
+                PowerManager.THERMAL_STATUS_CRITICAL -> "CRITICAL"
+                PowerManager.THERMAL_STATUS_EMERGENCY -> "EMERGENCY"
+                PowerManager.THERMAL_STATUS_SHUTDOWN -> "SHUTDOWN"
+                else -> "NORMAL"
+            }
+        } else {
+            "NORMAL"
+        }
+
+        // Real Thermal Headroom (API 30+)
+        val thermalHeadroomStr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && powerManager != null) {
+            try {
+                val headroom = powerManager.getThermalHeadroom(30)
+                if (!headroom.isNaN()) String.format(Locale.US, "%.2f", headroom) else null
+            } catch (_: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
+
         return HardwareStats(
             batteryPercentage = batteryPct,
             batteryTemperatureCelsius = batteryTemp,
@@ -57,7 +90,9 @@ class HardwareMonitor(
             ramTotalBytes = memInfo.totalMem,
             currentRefreshRate = displayState.currentRefreshRate,
             estimatedFpsText = "Not available",
-            cpuFrequencyInfo = "Normal"
+            cpuFrequencyInfo = "Normal",
+            thermalStatus = thermalStatusStr,
+            thermalHeadroom = thermalHeadroomStr
         )
     }
 

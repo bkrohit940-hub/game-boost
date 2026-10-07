@@ -10,7 +10,9 @@ data class HardwareStats(
     val ramTotalBytes: Long = 0L,
     val currentRefreshRate: Float = 60f,
     val estimatedFpsText: String = "Not available",
-    val cpuFrequencyInfo: String = "Normal"
+    val cpuFrequencyInfo: String = "Normal",
+    val thermalStatus: String = "NORMAL",
+    val thermalHeadroom: String? = null
 ) {
     val formattedRam: String
         get() {
@@ -23,3 +25,4 @@ data class HardwareStats(
     val formattedTemp: String
         get() = String.format(Locale.US, "%.0f°C", batteryTemperatureCelsius)
 }
+

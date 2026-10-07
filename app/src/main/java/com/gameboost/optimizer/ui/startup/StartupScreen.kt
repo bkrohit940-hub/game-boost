@@ -9,11 +9,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gameboost.optimizer.R
+import com.gameboost.optimizer.theme.AccentPrimary
 import com.gameboost.optimizer.theme.BorderSubtle
 import com.gameboost.optimizer.theme.DarkBg
 import com.gameboost.optimizer.theme.SurfaceElevated
@@ -93,44 +96,64 @@ fun StartupScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // [PROFILE PICTURE] - Personal profile picture exactly as provided
-            Box(
-                modifier = Modifier
-                    .size(112.dp)
-                    .clip(CircleShape)
-                    .background(SurfaceElevated)
-                    .border(1.5.dp, BorderSubtle, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.creator_profile),
-                    contentDescription = "Creator Profile",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            // GameBoost Emblem Logo
+            Image(
+                painter = painterResource(id = R.drawable.ic_game_boost_emblem),
+                contentDescription = "GameBoost Logo",
+                modifier = Modifier.size(76.dp)
+            )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Game Boost app name
+            // GameBoost app name
             Text(
-                text = "Game Boost",
+                text = "GAMEBOOST",
                 color = TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
-            // Exact creator credit: Created by Rohit B.K
             Text(
-                text = "Created by Rohit B.K",
-                color = TextSecondary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
+                text = "Gaming Performance Utility",
+                color = AccentPrimary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.5.sp
             )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Creator attribution: Created by Rohit B.K
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceElevated)
+                        .border(1.dp, BorderSubtle, CircleShape)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.creator_profile),
+                        contentDescription = "Rohit B.K",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Created by Rohit B.K",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp
+                )
+            }
         }
     }
 }

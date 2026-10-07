@@ -53,12 +53,15 @@ import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.SectionHeader
 import com.gameboost.optimizer.ui.components.StatusBadge
 
+import com.gameboost.optimizer.models.HardwareStats
+
 @Composable
 fun DiagnosticsScreen(
     capabilities: DeviceCapabilities,
     shizukuStatus: ShizukuStatus,
     lastResult: OptimizationResult?,
     activeBackup: DisplayStateBackup?,
+    hardwareStats: HardwareStats? = null,
     privilegedState: com.gameboost.optimizer.system.PrivilegedSystemState? = null,
     testResult: com.gameboost.optimizer.models.ShellCommandResult? = null,
     isTestingBackend: Boolean = false,
@@ -99,7 +102,7 @@ fun DiagnosticsScreen(
                         letterSpacing = 1.sp
                     )
                     Text(
-                        text = "Hardware, Shizuku, and Display Mode Matrix",
+                        text = "Hardware telemetry, thermal state, and backend audit",
                         color = TextTertiary,
                         fontSize = 11.sp
                     )
@@ -108,80 +111,74 @@ fun DiagnosticsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CRITICAL TECHNICAL NOTICE: Distinguishing Display Hz vs Game FPS vs Performance State
-            GlassCard(
-                backgroundColor = SurfaceElevated,
-                border = BorderStroke(1.dp, AccentPrimary.copy(alpha = 0.4f))
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = AccentPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "TECHNICAL METRICS ARCHITECTURE",
-                        color = AccentPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+            // ==========================================
+            // 1. DEVICE
+            // ==========================================
+            SectionHeader(title = "DEVICE")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                DiagRow("Manufacturer", capabilities.manufacturer)
+                DiagRow("Model", "${capabilities.brand} ${capabilities.model}")
+                DiagRow("Android Version", capabilities.androidVersion)
+                DiagRow("API Level", "${capabilities.apiLevel}")
+                DiagRow("CPU / SoC", "${capabilities.socHardware} (${capabilities.cpuCores} cores)")
+                DiagRow("RAM", capabilities.formattedRam)
+                DiagRow("System Firmware", capabilities.oemSkin)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ==========================================
+            // 2. DISPLAY
+            // ==========================================
+            SectionHeader(title = "DISPLAY")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                val currentHz = hardwareStats?.currentRefreshRate ?: capabilities.displayState.currentRefreshRate
+                val supportedHzList = capabilities.displayState.supportedRefreshRates
+                    .map { "${it.toInt()} Hz" }
+                    .distinct()
+                    .joinToString(", ")
+                    .ifEmpty { "${currentHz.toInt()} Hz" }
+
+                DiagRow("Resolution", "${capabilities.displayState.resolutionWidth} x ${capabilities.displayState.resolutionHeight}")
+                DiagRow("Current Refresh Rate", "${currentHz.toInt()} Hz")
+                DiagRow("Supported Refresh Rates", supportedHzList)
+                DiagRow("120Hz Panel Capable", if (capabilities.displayState.supports120Hz) "YES" else "NO")
+                DiagRow("HDR Capable", if (capabilities.displayState.supportsHdr) "YES" else "NO")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ==========================================
+            // 3. THERMAL
+            // ==========================================
+            SectionHeader(title = "THERMAL")
+            GlassCard(backgroundColor = SurfaceElevated) {
+                val tempText = hardwareStats?.formattedTemp ?: "UNAVAILABLE"
+                val thermalStatusText = hardwareStats?.thermalStatus ?: "NORMAL"
+                val headroomText = hardwareStats?.thermalHeadroom ?: "UNAVAILABLE"
+
+                DiagRow("Temperature", tempText)
+                DiagRow("Thermal Status", thermalStatusText)
+                DiagRow("Thermal Headroom", headroomText)
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "• Display Hz: The physical panel refresh rate configured via Android display compositor (e.g., 60Hz, 90Hz, 120Hz).\n" +
-                            "• Game FPS: The in-game rendering frame rate generated by the game engine. Setting a 120Hz display mode does NOT guarantee 120 FPS if the game engine caps frames or GPU load throttles.\n" +
-                            "• Performance State: Android Game Mode API profile and low-latency system animation scheduling.",
-                    color = TextSecondary,
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp
+                    text = "Values queried from official Android PowerManager and BatteryManager subsystem. GameBoost never fabricates thermal telemetry.",
+                    color = TextTertiary,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Shizuku State Diagnostics
-            SectionHeader(title = "Shizuku Service Status")
+            // ==========================================
+            // 4. PRIVILEGED BACKEND
+            // ==========================================
+            SectionHeader(title = "PRIVILEGED BACKEND")
             GlassCard(backgroundColor = SurfaceElevated) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = shizukuStatus.title,
-                            color = if (shizukuStatus.isReady) StatusReady else StatusWarning,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = shizukuStatus.summaryText,
-                            color = TextSecondary,
-                            fontSize = 11.sp
-                        )
-                    }
-                    StatusBadge(
-                        text = if (shizukuStatus.isReady) "AUTHORIZED" else "ATTENTION",
-                        state = if (shizukuStatus.isReady) BadgeState.SUCCESS else BadgeState.WARNING
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                DiagRow("Package Installed", if (shizukuStatus.isInstalled) "Yes (moe.shizuku.privileged.api)" else "No")
-                DiagRow("Binder Alive", if (shizukuStatus.isRunning) "Yes" else "No")
-                DiagRow("API Version", "v${shizukuStatus.version}")
-                DiagRow("Process UID", "${shizukuStatus.uid}")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Privileged Execution Orchestrator & Live Test
-            SectionHeader(title = "Privileged Execution Engine")
-            GlassCard(backgroundColor = SurfaceElevated) {
-                val activeType = privilegedState?.activeBackendType ?: com.gameboost.optimizer.system.BackendType.NONE
-                val isReady = privilegedState?.isPrivilegedReady ?: shizukuStatus.isReady
+                val isShizukuReady = shizukuStatus.isReady
+                val adbConnected = privilegedState?.wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTED
+                val activeType = privilegedState?.activeBackendType ?: if (isShizukuReady) com.gameboost.optimizer.system.BackendType.SHIZUKU else com.gameboost.optimizer.system.BackendType.NONE
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -190,34 +187,56 @@ fun DiagnosticsScreen(
                 ) {
                     Column {
                         Text(
-                            text = "ACTIVE BACKEND: ${activeType.displayName.uppercase()}",
-                            color = if (isReady) StatusReady else StatusWarning,
-                            fontSize = 13.sp,
+                            text = "SHIZUKU",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (isReady) "IPC command execution ready" else "No active privileged backend",
+                            text = if (isShizukuReady) "Binder IPC authorized (v${shizukuStatus.version})" else shizukuStatus.summaryText,
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
                     }
                     StatusBadge(
-                        text = if (isReady) "READY" else "UNAVAILABLE",
-                        state = if (isReady) BadgeState.SUCCESS else BadgeState.WARNING
+                        text = if (isShizukuReady) "AUTHORIZED" else "UNAVAILABLE",
+                        state = if (isShizukuReady) BadgeState.SUCCESS else BadgeState.WARNING
                     )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
-                DiagRow("Routing Priority", "1. Shizuku -> 2. Wireless ADB")
-                DiagRow("Active Connection", activeType.displayName)
-                if (privilegedState?.wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTED) {
-                    DiagRow("Wireless ADB Port", "${privilegedState.wirelessAdbState.connectedPort ?: "N/A"}")
-                    DiagRow("TLS Handshake Latency", "${privilegedState.wirelessAdbState.lastLatencyMs}ms")
+                HorizontalDivider(thickness = 0.5.dp, color = BorderSubtle)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "WIRELESS ADB",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (adbConnected) "TLS loopback active on port ${privilegedState.wirelessAdbState.connectedPort}" else "Android 11+ direct on-device shell fallback",
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    StatusBadge(
+                        text = if (adbConnected) "CONNECTED" else "DISCONNECTED",
+                        state = if (adbConnected) BadgeState.SUCCESS else BadgeState.NEUTRAL
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+                DiagRow("Active Routing Engine", activeType.displayName)
 
                 if (onTestBackend != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     androidx.compose.material3.Button(
                         onClick = onTestBackend,
                         enabled = !isTestingBackend,
@@ -237,7 +256,7 @@ fun DiagnosticsScreen(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("RUNNING READ-ONLY 'id' TEST...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("TESTING SHELL IPC...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Terminal,
@@ -245,13 +264,13 @@ fun DiagnosticsScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("TEST PRIVILEGED SHELL EXECUTION", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("TEST PRIVILEGED SHELL", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
                 if (testResult != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Surface(
                         color = DarkBg,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
@@ -259,33 +278,13 @@ fun DiagnosticsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (testResult.isSuccess) "EXECUTION VERIFIED" else "EXECUTION FAILED",
-                                    color = if (testResult.isSuccess) StatusReady else StatusDanger,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "${testResult.durationMs}ms • Exit ${testResult.exitCode}",
-                                    color = TextTertiary,
-                                    fontSize = 10.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Command: ${testResult.command}",
-                                color = TextSecondary,
+                                text = if (testResult.isSuccess) "VERIFIED (${testResult.durationMs}ms)" else "EXECUTION FAILED",
+                                color = if (testResult.isSuccess) StatusReady else StatusDanger,
                                 fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
+                                fontWeight = FontWeight.Bold
                             )
                             if (testResult.stdout.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "stdout: ${testResult.stdout}",
                                     color = TextPrimary,
@@ -293,15 +292,6 @@ fun DiagnosticsScreen(
                                     fontFamily = FontFamily.Monospace
                                 )
                             }
-                            if (testResult.stderr.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "stderr: ${testResult.stderr}",
-                                    color = StatusDanger,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
                         }
                     }
                 }
@@ -309,110 +299,27 @@ fun DiagnosticsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Display Capability Matrix
-            SectionHeader(title = "Display Panel Modes")
+            // ==========================================
+            // 5. OPTIMIZATION CAPABILITIES
+            // ==========================================
+            SectionHeader(title = "OPTIMIZATION CAPABILITIES")
             GlassCard(backgroundColor = SurfaceElevated) {
-                DiagRow("Active Refresh Rate", "${capabilities.displayState.currentRefreshRate.toInt()}Hz")
-                DiagRow("Maximum Supported Rate", "${capabilities.displayState.maxRefreshRate.toInt()}Hz")
-                DiagRow("120Hz Panel Support", if (capabilities.displayState.supports120Hz) "Supported" else "Not Supported")
-                DiagRow("Resolution", "${capabilities.displayState.resolutionWidth} x ${capabilities.displayState.resolutionHeight}")
-                DiagRow("HDR Capable", if (capabilities.displayState.supportsHdr) "Yes" else "No")
+                val isPrivileged = shizukuStatus.isReady || (privilegedState?.wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTED)
 
-                if (capabilities.displayState.supportedModes.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "DETECTED HARDWARE MODES",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    capabilities.displayState.supportedModes.forEach { mode ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Mode #${mode.modeId}: ${mode.width}x${mode.height}",
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
-                            )
-                            Text(
-                                text = "${mode.refreshRate.toInt()}Hz",
-                                color = AccentPrimary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Hardware & OS Telemetry
-            SectionHeader(title = "Hardware Specifications")
-            GlassCard(backgroundColor = SurfaceElevated) {
-                DiagRow("Device", "${capabilities.brand} ${capabilities.model}")
-                DiagRow("Manufacturer", capabilities.manufacturer)
-                DiagRow("Platform SoC", capabilities.socHardware)
-                DiagRow("CPU Cores", "${capabilities.cpuCores}")
-                DiagRow("Physical Memory", capabilities.formattedRam)
-                DiagRow("Android Version", "Android ${capabilities.androidVersion} (API ${capabilities.apiLevel})")
-                DiagRow("System Firmware", capabilities.oemSkin)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Optimization Capability Matrix (Transparency specification)
-            SectionHeader(title = "Optimization Capability Matrix")
-            GlassCard(backgroundColor = SurfaceElevated) {
-                val refreshStatus = if (shizukuStatus.isReady) "SUPPORTED" else "UNAVAILABLE"
-                val gameModeStatus = if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    if (shizukuStatus.isReady) "SUPPORTED" else "UNAVAILABLE"
-                } else {
-                    "NOT SUPPORTED"
-                }
-
-                DiagRow("Refresh Control", refreshStatus)
-                DiagRow("Game Mode API", gameModeStatus)
-                DiagRow("Background Memory Trim", if (shizukuStatus.isReady) "SUPPORTED" else "STANDALONE")
-                DiagRow("Thermal Override", "NOT SUPPORTED")
+                DiagRow("Refresh Rate Locking", if (isPrivileged) "SUPPORTED" else "UNAVAILABLE")
+                DiagRow("Android Game Mode API", if (capabilities.apiLevel >= 31 && isPrivileged) "SUPPORTED" else if (capabilities.apiLevel >= 31) "UNAVAILABLE" else "NOT SUPPORTED")
+                DiagRow("Animation Scaling", if (isPrivileged) "SUPPORTED" else "UNAVAILABLE")
+                DiagRow("Background Memory Trim", "SUPPORTED")
                 DiagRow("Process Priority (renice)", "UNAVAILABLE")
+                DiagRow("Thermal Control Bypassing", "NOT SUPPORTED")
 
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Transparency Notice: Hardware thermal protection is never bypassed. Process priority renice is blocked by Linux kernel SELinux policies.",
+                    text = "Process priority renice is blocked by Android Linux SELinux sandbox. Thermal trip points are governed by kernel safety drivers and cannot be unsafely modified.",
                     color = TextTertiary,
                     fontSize = 10.sp,
                     lineHeight = 14.sp
                 )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Active Backup State
-            SectionHeader(title = "Reversible Session Backup")
-            GlassCard(backgroundColor = SurfaceElevated) {
-                if (activeBackup != null) {
-                    DiagRow("Peak Refresh Rate", activeBackup.peakRefreshRate ?: "System default")
-                    DiagRow("Min Refresh Rate", activeBackup.minRefreshRate ?: "System default")
-                    DiagRow("User Refresh Rate", activeBackup.userRefreshRate ?: "Not set")
-                    DiagRow("Window Animation", "${activeBackup.windowAnimationScale ?: "1.0"}x")
-                    DiagRow("Transition Animation", "${activeBackup.transitionAnimationScale ?: "1.0"}x")
-                    DiagRow("Animator Duration", "${activeBackup.animatorDurationScale ?: "1.0"}x")
-                } else {
-                    Text(
-                        text = "No active session backup. System is running at baseline defaults.",
-                        color = TextSecondary,
-                        fontSize = 11.sp
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

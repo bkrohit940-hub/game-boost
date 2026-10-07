@@ -17,35 +17,46 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.gameboost.optimizer.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gameboost.optimizer.R
 import com.gameboost.optimizer.data.datastore.AppUserPreferences
+import com.gameboost.optimizer.models.PerformanceMode
 import com.gameboost.optimizer.models.ShizukuStatus
 import com.gameboost.optimizer.theme.AccentPrimary
 import com.gameboost.optimizer.theme.BorderSubtle
@@ -58,20 +69,10 @@ import com.gameboost.optimizer.theme.TextSecondary
 import com.gameboost.optimizer.theme.TextTertiary
 import com.gameboost.optimizer.ui.components.BadgeState
 import com.gameboost.optimizer.ui.components.GlassCard
+import com.gameboost.optimizer.ui.components.PerformanceModeSelector
+import com.gameboost.optimizer.ui.components.RefreshRateSelector
 import com.gameboost.optimizer.ui.components.SectionHeader
 import com.gameboost.optimizer.ui.components.StatusBadge
-
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun SettingsScreen(
@@ -79,11 +80,17 @@ fun SettingsScreen(
     shizukuStatus: ShizukuStatus,
     wirelessAdbState: com.gameboost.optimizer.system.adb.WirelessAdbState? = null,
     adbOperationStatus: String? = null,
+    supportedRefreshRates: List<Float> = emptyList(),
+    onSelectDefaultProfile: (PerformanceMode) -> Unit = {},
+    onSelectPreferredRefreshRate: (Float) -> Unit = {},
+    onToggleAutoBoost: (Boolean) -> Unit,
+    onToggleRestoreOnExit: (Boolean) -> Unit,
+    onToggleSessionMonitoring: (Boolean) -> Unit = {},
+    onToggleNotifications: (Boolean) -> Unit = {},
+    onToggleStartupScreen: (Boolean) -> Unit = {},
     onPairWirelessAdb: ((String, Int) -> Unit)? = null,
     onConnectWirelessAdb: ((Int) -> Unit)? = null,
     onDisconnectWirelessAdb: (() -> Unit)? = null,
-    onToggleAutoBoost: (Boolean) -> Unit,
-    onToggleRestoreOnExit: (Boolean) -> Unit,
     onRecheckShizuku: () -> Unit,
     onOpenShizukuSetup: () -> Unit,
     onRestoreDefault: (() -> Unit)? = null,
@@ -113,109 +120,116 @@ fun SettingsScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "SETTINGS",
-                    color = TextPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Honest Technical Educational Section
-            GlassCard(backgroundColor = SurfaceElevated) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = AccentPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                Column {
                     Text(
-                        text = "HONEST PERFORMANCE DISCLOSURE",
-                        color = AccentPrimary,
-                        fontSize = 12.sp,
+                        text = "SETTINGS",
+                        color = TextPrimary,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = "Application preferences and engine configuration",
+                        color = TextTertiary,
+                        fontSize = 11.sp
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Game Boost configures Android display compositor modes and system performance states. " +
-                            "Physical display refresh rates (e.g. 120Hz) reduce input latency and motion judder, " +
-                            "but actual in-game frame rate (FPS) is determined by the game developer's engine and device GPU rendering capacity. " +
-                            "Game Boost never claims fabricated FPS numbers.",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Automation & Restore Toggles
-            SectionHeader(title = "Automation & Reversibility")
+            // ==========================================
+            // 1. GENERAL
+            // ==========================================
+            SectionHeader(title = "GENERAL")
             GlassCard(backgroundColor = SurfaceElevated) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Auto-Boost On Launch",
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Automatically apply optimizations when supported games are launched",
-                            color = TextTertiary,
-                            fontSize = 11.sp
-                        )
-                    }
-                    Switch(
-                        checked = userPreferences.isAutoBoostEnabled,
-                        onCheckedChange = onToggleAutoBoost,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = DarkBg,
-                            checkedTrackColor = AccentPrimary
-                        )
-                    )
-                }
+                // Default Profile
+                Text(
+                    text = "DEFAULT PROFILE",
+                    color = TextTertiary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                PerformanceModeSelector(
+                    selectedMode = userPreferences.selectedProfileType,
+                    onModeSelected = onSelectDefaultProfile
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Profile applied by default to newly launched game sessions",
+                    color = TextSecondary,
+                    fontSize = 11.sp
+                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 0.5.dp, color = BorderSubtle)
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Restore Baseline On Exit",
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Revert display rates and animation scales when gaming session ends",
-                            color = TextTertiary,
-                            fontSize = 11.sp
-                        )
-                    }
-                    Switch(
-                        checked = userPreferences.isRestoreOnExitEnabled,
-                        onCheckedChange = onToggleRestoreOnExit,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = DarkBg,
-                            checkedTrackColor = AccentPrimary
-                        )
-                    )
-                }
+                // Preferred Refresh Rate
+                Text(
+                    text = "PREFERRED REFRESH RATE",
+                    color = TextTertiary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                RefreshRateSelector(
+                    currentRate = userPreferences.targetRefreshRate,
+                    selectedTarget = userPreferences.targetRefreshRate,
+                    supportedRates = supportedRefreshRates,
+                    onSelectRate = onSelectPreferredRefreshRate
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Target display frequency set in Android display compositor",
+                    color = TextSecondary,
+                    fontSize = 11.sp
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 0.5.dp, color = BorderSubtle)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Auto-Revert
+                SettingsSwitchRow(
+                    title = "Auto-Revert",
+                    subtitle = "Revert display rates and animation scales when gaming session ends",
+                    checked = userPreferences.isRestoreOnExitEnabled,
+                    onCheckedChange = onToggleRestoreOnExit
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Session Monitoring
+                SettingsSwitchRow(
+                    title = "Session Monitoring",
+                    subtitle = "Track active gaming sessions and collect hardware telemetry",
+                    checked = userPreferences.isSessionMonitoringEnabled,
+                    onCheckedChange = onToggleSessionMonitoring
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Notifications
+                SettingsSwitchRow(
+                    title = "Notifications",
+                    subtitle = "Show background optimization status and completion notices",
+                    checked = userPreferences.isNotificationsEnabled,
+                    onCheckedChange = onToggleNotifications
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Startup Screen
+                SettingsSwitchRow(
+                    title = "Startup Screen",
+                    subtitle = "Display quick attribution splash on cold application launch",
+                    checked = userPreferences.showStartupScreen,
+                    onCheckedChange = onToggleStartupScreen
+                )
 
                 if (onRestoreDefault != null) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -231,16 +245,19 @@ fun SettingsScreen(
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("RESTORE SYSTEM DEFAULTS NOW", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text("RESTORE SYSTEM BASELINE DEFAULTS", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Shizuku Service Management
-            SectionHeader(title = "Privileged Service")
+            // ==========================================
+            // 2. PRIVILEGED BACKEND & WIRELESS ADB
+            // ==========================================
+            SectionHeader(title = "PRIVILEGED BACKEND")
             GlassCard(backgroundColor = SurfaceElevated) {
+                // Shizuku
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -248,8 +265,8 @@ fun SettingsScreen(
                 ) {
                     Column {
                         Text(
-                            text = shizukuStatus.title,
-                            color = if (shizukuStatus.isReady) StatusReady else StatusWarning,
+                            text = "SHIZUKU IPC",
+                            color = TextPrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -260,12 +277,12 @@ fun SettingsScreen(
                         )
                     }
                     StatusBadge(
-                        text = if (shizukuStatus.isReady) "READY" else "ATTENTION",
+                        text = if (shizukuStatus.isReady) "AUTHORIZED" else "ATTENTION",
                         state = if (shizukuStatus.isReady) BadgeState.SUCCESS else BadgeState.WARNING
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -277,15 +294,10 @@ fun SettingsScreen(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("RECHECK", fontSize = 11.sp)
                     }
-
                     Button(
                         onClick = onOpenShizukuSetup,
                         modifier = Modifier.weight(1f),
@@ -295,13 +307,12 @@ fun SettingsScreen(
                         Text("SETUP GUIDE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 0.5.dp, color = BorderSubtle)
+                Spacer(modifier = Modifier.height(14.dp))
 
-            // Wireless ADB Management (Android 11+ Fallback)
-            SectionHeader(title = "Wireless Debugging (ADB Fallback)")
-            GlassCard(backgroundColor = SurfaceElevated) {
+                // Wireless ADB Pairing & Connect
                 var pairingCodeInput by remember { mutableStateOf("") }
                 var pairingPortInput by remember { mutableStateOf("") }
                 var connectPortInput by remember { mutableStateOf("") }
@@ -324,32 +335,26 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isAdbConnected) "WIRELESS ADB ACTIVE" else "WIRELESS DEBUGGING",
-                            color = if (isAdbConnected) StatusReady else StatusWarning,
-                            fontSize = 13.sp,
+                            text = "WIRELESS DEBUGGING (FALLBACK)",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (isAdbConnected) "Loopback TLS connection active on port ${wirelessAdbState.connectedPort}"
-                            else "Direct on-device shell for Android 11+ (No PC required)",
+                            text = if (isAdbConnected) "TLS loopback active on port ${wirelessAdbState.connectedPort}"
+                            else "Android 11+ direct on-device shell fallback (No PC required)",
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
                     }
                     StatusBadge(
                         text = adbStatusText,
-                        state = when {
-                            isAdbConnected -> BadgeState.SUCCESS
-                            wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTION_FAILED -> BadgeState.ERROR
-                            wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.CONNECTING ||
-                            wirelessAdbState?.status == com.gameboost.optimizer.system.adb.AdbConnectionStatus.PAIRING -> BadgeState.WARNING
-                            else -> BadgeState.NEUTRAL
-                        }
+                        state = if (isAdbConnected) BadgeState.SUCCESS else BadgeState.NEUTRAL
                     )
                 }
 
                 if (adbOperationStatus != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = adbOperationStatus,
                         color = AccentPrimary,
@@ -359,44 +364,34 @@ fun SettingsScreen(
                 }
 
                 if (isAdbConnected) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    if (onDisconnectWirelessAdb != null) {
-                        OutlinedButton(
-                            onClick = onDisconnectWirelessAdb,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("DISCONNECT WIRELESS ADB", fontSize = 11.sp)
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { onDisconnectWirelessAdb?.invoke() },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusWarning),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("DISCONNECT ADB", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 } else {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "1. PAIR DEVICE (ONE-TIME)",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Enable Developer Options > Wireless Debugging > 'Pair device with pairing code'",
+                        text = "Step 1: Pair with Device",
                         color = TextSecondary,
-                        fontSize = 10.sp
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
                             value = pairingCodeInput,
                             onValueChange = { if (it.length <= 6) pairingCodeInput = it },
-                            label = { Text("Pair Code (6 digits)", fontSize = 10.sp) },
+                            label = { Text("Code (6 digits)", fontSize = 10.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1.2f),
@@ -407,14 +402,13 @@ fun SettingsScreen(
                                 unfocusedTextColor = TextPrimary
                             )
                         )
-
                         OutlinedTextField(
                             value = pairingPortInput,
                             onValueChange = { if (it.length <= 5) pairingPortInput = it },
-                            label = { Text("Pair Port", fontSize = 10.sp) },
+                            label = { Text("Port", fontSize = 10.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            modifier = Modifier.weight(0.8f),
+                            modifier = Modifier.weight(0.9f),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = AccentPrimary,
                                 unfocusedBorderColor = BorderSubtle,
@@ -422,41 +416,30 @@ fun SettingsScreen(
                                 unfocusedTextColor = TextPrimary
                             )
                         )
+                        Button(
+                            onClick = {
+                                val port = pairingPortInput.toIntOrNull() ?: 0
+                                if (pairingCodeInput.length == 6 && port in 1024..65535) {
+                                    onPairWirelessAdb?.invoke(pairingCodeInput, port)
+                                }
+                            },
+                            enabled = pairingCodeInput.length == 6 && (pairingPortInput.toIntOrNull() ?: 0) in 1024..65535,
+                            modifier = Modifier.height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("PAIR", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Button(
-                        onClick = {
-                            val code = pairingCodeInput.trim()
-                            val port = pairingPortInput.toIntOrNull() ?: 0
-                            if (code.length == 6 && port in 1024..65535) {
-                                onPairWirelessAdb?.invoke(code, port)
-                            }
-                        },
-                        enabled = pairingCodeInput.length == 6 && (pairingPortInput.toIntOrNull() ?: 0) in 1024..65535,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("PAIR WITH DEVICE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "2. CONNECT TO PORT",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Enter the main port shown under 'IP address & Port' in Wireless Debugging",
+                        text = "Step 2: Connect to Main Port",
                         color = TextSecondary,
-                        fontSize = 10.sp
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -465,7 +448,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = connectPortInput,
                             onValueChange = { if (it.length <= 5) connectPortInput = it },
-                            label = { Text("Port (e.g. 41235)", fontSize = 10.sp) },
+                            label = { Text("Connect Port", fontSize = 10.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f),
@@ -476,7 +459,6 @@ fun SettingsScreen(
                                 unfocusedTextColor = TextPrimary
                             )
                         )
-
                         Button(
                             onClick = {
                                 val port = connectPortInput.toIntOrNull() ?: 0
@@ -499,82 +481,51 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Security & Anti-Cheat Boundary
-            SectionHeader(title = "Safety & Compliance")
+            // ==========================================
+            // 3. ABOUT
+            // ==========================================
+            SectionHeader(title = "ABOUT")
             GlassCard(backgroundColor = SurfaceElevated) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = StatusReady,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "SECURITY GUARANTEE",
-                        color = StatusReady,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "• Zero game file tampering (APK, OBB, or assets are never modified)\n" +
-                            "• Zero memory injection or network interception\n" +
-                            "• 100% compliant with PUBG/BGMI Fair Play & Anti-Cheat\n" +
-                            "• All shell operations strictly restricted to security allowlist\n" +
-                            "• Hardware thermal safety protections are strictly respected",
-                    color = TextSecondary,
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // About Screen / Independent Developer Branding
-            SectionHeader(title = "About")
-            GlassCard(backgroundColor = SurfaceElevated) {
+                // GameBoost Version
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_game_boost_emblem),
-                        contentDescription = "Game Boost Logo",
-                        modifier = Modifier.size(44.dp)
+                        contentDescription = "GameBoost Logo",
+                        modifier = Modifier.size(46.dp)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Game Boost",
+                            text = "GameBoost",
                             color = TextPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
                         )
                         Text(
-                            text = "Version 1.0 • Performance Utility",
+                            text = "Version 1.0.3 • Release",
                             color = TextSecondary,
-                            fontSize = 11.sp
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = BorderSubtle
-                )
+                HorizontalDivider(thickness = 0.5.dp, color = BorderSubtle)
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Creator Attribution: Created by Rohit B.K
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .border(1.dp, BorderSubtle, CircleShape)
                     ) {
@@ -585,16 +536,16 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
                             text = "Created by Rohit B.K",
                             color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Independent Gaming Performance Utility",
+                            text = "Gaming Performance & System Utility",
                             color = TextTertiary,
                             fontSize = 11.sp
                         )
@@ -604,5 +555,44 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = TextTertiary,
+                fontSize = 11.sp,
+                lineHeight = 15.sp
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = DarkBg,
+                checkedTrackColor = AccentPrimary
+            )
+        )
     }
 }

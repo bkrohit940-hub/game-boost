@@ -233,6 +233,24 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun toggleSessionMonitoring(enabled: Boolean) {
+        viewModelScope.launch {
+            repo.setSessionMonitoring(enabled)
+        }
+    }
+
+    fun toggleNotifications(enabled: Boolean) {
+        viewModelScope.launch {
+            repo.setNotifications(enabled)
+        }
+    }
+
+    fun toggleShowStartupScreen(enabled: Boolean) {
+        viewModelScope.launch {
+            repo.setShowStartupScreen(enabled)
+        }
+    }
+
     fun completeFirstRun() {
         viewModelScope.launch {
             repo.setFirstRunCompleted(true)

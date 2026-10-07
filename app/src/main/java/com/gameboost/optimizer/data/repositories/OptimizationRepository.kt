@@ -116,6 +116,18 @@ class OptimizationRepository(
         userPreferencesRepository.setRestoreOnExit(enabled)
     }
 
+    suspend fun setSessionMonitoring(enabled: Boolean) {
+        userPreferencesRepository.setSessionMonitoring(enabled)
+    }
+
+    suspend fun setNotifications(enabled: Boolean) {
+        userPreferencesRepository.setNotifications(enabled)
+    }
+
+    suspend fun setShowStartupScreen(enabled: Boolean) {
+        userPreferencesRepository.setShowStartupScreen(enabled)
+    }
+
     suspend fun setShizukuEverAuthorized(auth: Boolean) {
         userPreferencesRepository.setShizukuEverAuthorized(auth)
     }

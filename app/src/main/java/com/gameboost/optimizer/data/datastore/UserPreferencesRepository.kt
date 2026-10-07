@@ -21,6 +21,9 @@ data class AppUserPreferences(
     val targetRefreshRate: Float = 120f,
     val isAutoBoostEnabled: Boolean = true,
     val isRestoreOnExitEnabled: Boolean = true,
+    val isSessionMonitoringEnabled: Boolean = true,
+    val isNotificationsEnabled: Boolean = true,
+    val showStartupScreen: Boolean = true,
     val wasShizukuEverAuthorized: Boolean = false
 )
 
@@ -33,6 +36,9 @@ class UserPreferencesRepository(
         val KEY_TARGET_REFRESH_RATE = floatPreferencesKey("key_target_refresh_rate")
         val KEY_AUTO_BOOST = booleanPreferencesKey("key_auto_boost")
         val KEY_RESTORE_ON_EXIT = booleanPreferencesKey("key_restore_on_exit")
+        val KEY_SESSION_MONITORING = booleanPreferencesKey("key_session_monitoring")
+        val KEY_NOTIFICATIONS = booleanPreferencesKey("key_notifications")
+        val KEY_SHOW_STARTUP_SCREEN = booleanPreferencesKey("key_show_startup_screen")
         val KEY_SHIZUKU_EVER_AUTH = booleanPreferencesKey("key_shizuku_ever_auth")
     }
 
@@ -47,6 +53,9 @@ class UserPreferencesRepository(
         val targetRate = prefs[KEY_TARGET_REFRESH_RATE] ?: 120f
         val autoBoost = prefs[KEY_AUTO_BOOST] ?: true
         val restoreOnExit = prefs[KEY_RESTORE_ON_EXIT] ?: true
+        val sessionMonitoring = prefs[KEY_SESSION_MONITORING] ?: true
+        val notifications = prefs[KEY_NOTIFICATIONS] ?: true
+        val startupScreen = prefs[KEY_SHOW_STARTUP_SCREEN] ?: true
         val shizukuEverAuth = prefs[KEY_SHIZUKU_EVER_AUTH] ?: false
 
         AppUserPreferences(
@@ -55,6 +64,9 @@ class UserPreferencesRepository(
             targetRefreshRate = targetRate,
             isAutoBoostEnabled = autoBoost,
             isRestoreOnExitEnabled = restoreOnExit,
+            isSessionMonitoringEnabled = sessionMonitoring,
+            isNotificationsEnabled = notifications,
+            showStartupScreen = startupScreen,
             wasShizukuEverAuthorized = shizukuEverAuth
         )
     }
@@ -77,6 +89,18 @@ class UserPreferencesRepository(
 
     suspend fun setRestoreOnExit(enabled: Boolean) {
         context.dataStore.edit { it[KEY_RESTORE_ON_EXIT] = enabled }
+    }
+
+    suspend fun setSessionMonitoring(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_SESSION_MONITORING] = enabled }
+    }
+
+    suspend fun setNotifications(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun setShowStartupScreen(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_SHOW_STARTUP_SCREEN] = enabled }
     }
 
     suspend fun setShizukuEverAuthorized(authorized: Boolean) {

@@ -437,10 +437,10 @@ fun PerformanceModeSelector(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             listOf(
-                PerformanceMode.SAFE,
-                PerformanceMode.PERFORMANCE,
-                PerformanceMode.AGGRESSIVE
-            ).forEach { mode ->
+                Triple(PerformanceMode.SAFE, "BALANCED", "Balanced performance prioritizing thermal comfort and battery"),
+                Triple(PerformanceMode.PERFORMANCE, "PERFORMANCE", "Recommended profile. Unlocks high refresh rate and optimizes gaming responsiveness"),
+                Triple(PerformanceMode.AGGRESSIVE, "EXTREME", "Aggressive profile. Maximum sustained clocks and background process throttling")
+            ).forEach { (mode, label, _) ->
                 val isSelected = selectedMode == mode
                 Surface(
                     modifier = Modifier
@@ -454,11 +454,11 @@ fun PerformanceModeSelector(
                     )
                 ) {
                     Column(
-                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = mode.displayName.uppercase(),
+                            text = label,
                             color = if (isSelected) AccentPrimary else TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -923,3 +923,281 @@ fun TurboIgniteButton(
         }
     }
 }
+
+// ==========================================
+// 11. STANDARDIZED DESIGN SYSTEM COMPONENTS
+// ==========================================
+
+/**
+ * Standard GameIcon composable wrapping PackageManager icon retrieval.
+ */
+@Composable
+fun GameIcon(
+    packageName: String?,
+    isInstalled: Boolean,
+    modifier: Modifier = Modifier,
+    sizeDp: Dp = 52.dp
+) {
+    GameIconView(
+        packageName = packageName,
+        isInstalled = isInstalled,
+        modifier = modifier,
+        sizeDp = sizeDp
+    )
+}
+
+/**
+ * Standard GameBoostCard with restrained corner radius and subtle graphite borders.
+ */
+@Composable
+fun GameBoostCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    border: BorderStroke? = BorderStroke(1.dp, BorderSubtle),
+    backgroundColor: Color = SurfaceElevated,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    GlassCard(
+        modifier = modifier,
+        onClick = onClick,
+        border = border,
+        backgroundColor = backgroundColor,
+        content = content
+    )
+}
+
+/**
+ * Tactical game card displaying actual PackageManager icon, display name, and installation state.
+ */
+@Composable
+fun GameCard(
+    game: com.gameboost.optimizer.models.GameProfile,
+    isSelected: Boolean,
+    isOptimized: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HeroGameCard(
+        game = game,
+        isSelected = isSelected,
+        isOptimized = isOptimized,
+        isBoosting = false,
+        onClick = onClick,
+        modifier = modifier
+    )
+}
+
+/**
+ * Capability execution states matching technical audit requirements.
+ */
+enum class CapabilityStatus(val displayName: String, val badgeState: BadgeState) {
+    SUPPORTED("SUPPORTED", BadgeState.INFO),
+    ACTIVE("ACTIVE", BadgeState.SUCCESS),
+    FAILED("FAILED", BadgeState.ERROR),
+    UNAVAILABLE("UNAVAILABLE", BadgeState.WARNING),
+    NOT_SUPPORTED("NOT SUPPORTED", BadgeState.NEUTRAL)
+}
+
+/**
+ * Capability row showing feature name and technical status indicator.
+ */
+@Composable
+fun CapabilityRow(
+    title: String,
+    status: CapabilityStatus,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f, fill = false)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    color = TextTertiary,
+                    fontSize = 11.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        StatusBadge(
+            text = status.displayName,
+            state = status.badgeState
+        )
+    }
+}
+
+/**
+ * Compact status tile for telemetry and states.
+ */
+@Composable
+fun StatusTile(
+    label: String,
+    value: String,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    accentColor: Color = AccentPrimary,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = SurfaceElevated,
+        border = BorderStroke(1.dp, BorderSubtle)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = label.uppercase(),
+                    color = TextTertiary,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                color = TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black
+            )
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = TextSecondary,
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Compact telemetry tile for dashboard metrics.
+ */
+@Composable
+fun TelemetryTile(
+    label: String,
+    value: String,
+    icon: ImageVector? = null,
+    accentColor: Color = AccentPrimary,
+    modifier: Modifier = Modifier
+) {
+    MetricChip(
+        label = label,
+        value = value,
+        icon = icon,
+        accentColor = accentColor,
+        modifier = modifier
+    )
+}
+
+/**
+ * Primary action button for Turbo / Boost triggers (Height >= 56dp, min target >= 48dp).
+ */
+@Composable
+fun PrimaryBoostButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    isBoosting: Boolean = false,
+    text: String = "BOOST & PLAY",
+    modifier: Modifier = Modifier
+) {
+    TurboIgniteButton(
+        onClick = onClick,
+        enabled = enabled,
+        isBoosting = isBoosting,
+        text = text,
+        modifier = modifier
+    )
+}
+
+/**
+ * Privileged backend status card displaying connection mode and access info.
+ */
+@Composable
+fun BackendStatusCard(
+    backendType: com.gameboost.optimizer.system.BackendType,
+    isReady: Boolean,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val title = when (backendType) {
+        com.gameboost.optimizer.system.BackendType.SHIZUKU -> "SHIZUKU SERVICE"
+        com.gameboost.optimizer.system.BackendType.WIRELESS_ADB -> "WIRELESS DEBUGGING"
+        else -> "UNPRIVILEGED MODE"
+    }
+    val desc = when {
+        isReady && backendType == com.gameboost.optimizer.system.BackendType.SHIZUKU ->
+            "Active binder interface connected. Full display and game mode controls enabled."
+        isReady && backendType == com.gameboost.optimizer.system.BackendType.WIRELESS_ADB ->
+            "Direct loopback TLS shell connected. Full privileged commands enabled."
+        else ->
+            "Connect Shizuku or Wireless ADB to unlock 120Hz display locking and performance control."
+    }
+
+    GameBoostCard(
+        modifier = modifier,
+        border = BorderStroke(1.dp, if (isReady) BorderSubtle else StatusWarning.copy(alpha = 0.5f)),
+        backgroundColor = SurfaceElevated
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = if (isReady) StatusReady else StatusWarning,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = desc,
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onAction,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (isReady) TextPrimary else StatusWarning
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(if (isReady) "STATUS" else "CONNECT", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+

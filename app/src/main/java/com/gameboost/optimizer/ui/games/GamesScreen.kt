@@ -214,16 +214,18 @@ private fun GameItemRow(
                 Button(
                     onClick = onBoostAndPlay,
                     enabled = !isBoosting,
-                    modifier = Modifier.weight(1.3f),
+                    modifier = Modifier
+                        .weight(1.3f)
+                        .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AccentPrimary,
                         contentColor = DarkBg
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     if (isBoosting) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(16.dp),
                             color = DarkBg,
                             strokeWidth = 2.dp
                         )
@@ -231,7 +233,7 @@ private fun GameItemRow(
                         Icon(
                             imageVector = Icons.Default.Bolt,
                             contentDescription = null,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
@@ -245,23 +247,27 @@ private fun GameItemRow(
                 OutlinedButton(
                     onClick = onBoostOnly,
                     enabled = !isBoosting,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("BOOST ONLY", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 OutlinedButton(
                     onClick = onPlayOnly,
-                    modifier = Modifier.weight(0.7f),
+                    modifier = Modifier
+                        .weight(0.7f)
+                        .height(48.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Play",
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
