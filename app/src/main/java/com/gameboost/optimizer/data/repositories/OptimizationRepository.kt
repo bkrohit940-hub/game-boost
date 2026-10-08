@@ -25,7 +25,8 @@ class OptimizationRepository(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val optimizationEngine: OptimizationEngine,
     val privilegedEngine: com.gameboost.optimizer.system.PrivilegedExecutionEngine? = null,
-    val adbConnectionManager: com.gameboost.optimizer.system.adb.AdbConnectionManager? = null
+    val adbConnectionManager: com.gameboost.optimizer.system.adb.AdbConnectionManager? = null,
+    val displayController: com.gameboost.optimizer.system.DisplayController? = null
 ) {
     val shizukuStatus: StateFlow<ShizukuStatus> = shizukuManager.statusFlow
     val wirelessAdbState: StateFlow<com.gameboost.optimizer.system.adb.WirelessAdbState>? = adbConnectionManager?.stateFlow
@@ -34,6 +35,10 @@ class OptimizationRepository(
     val activeGameProfile: StateFlow<GameProfile?> = optimizationEngine.activeGameProfile
     val lastResult: StateFlow<OptimizationResult?> = optimizationEngine.lastResult
     val userPreferences: Flow<AppUserPreferences> = userPreferencesRepository.userPreferencesFlow
+
+    suspend fun getDisplayDiagnostics(targetPackageName: String? = null): com.gameboost.optimizer.models.DisplayDiagnosticData? {
+        return displayController?.getDisplayDiagnostics(targetPackageName)
+    }
 
     fun getDeviceCapabilities(): DeviceCapabilities {
         return deviceCapabilityDetector.detectCapabilities()

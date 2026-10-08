@@ -48,6 +48,7 @@ fun MainNavigation(
     val adbOperationStatus by viewModel.adbOperationStatus.collectAsState()
 
     val selectedRefreshRate by viewModel.selectedRefreshRate.collectAsState()
+    val displayDiagnostics by viewModel.displayDiagnostics.collectAsState()
 
     // Clean, fast startup branding: starts with StartupKey
     val backStack = rememberNavBackStack(StartupKey)
@@ -249,11 +250,13 @@ fun MainNavigation(
                             shizukuStatus = shizukuStatus,
                             lastResult = lastResult,
                             hardwareStats = hardwareStats,
+                            displayDiagnostics = displayDiagnostics,
                             activeBackup = viewModel.getActiveBackup(),
                             privilegedState = privilegedState,
                             testResult = testResult,
                             isTestingBackend = isTestingBackend,
                             onTestBackend = { viewModel.testBackend() },
+                            onRefreshDiagnostics = { viewModel.refreshDisplayDiagnostics() },
                             onClearTestResult = { viewModel.clearTestResult() },
                             onBack = {
                                 backStack.clear()

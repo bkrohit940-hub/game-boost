@@ -6,8 +6,10 @@ import com.gameboost.optimizer.models.GameProfile
 import com.gameboost.optimizer.models.OptimizationProfile
 import com.gameboost.optimizer.models.OptimizationResult
 import com.gameboost.optimizer.models.OptimizationSession
+import com.gameboost.optimizer.models.OptimizationStepResult
 import com.gameboost.optimizer.models.RestorationResult
 import com.gameboost.optimizer.models.SessionStatus
+import com.gameboost.optimizer.models.StepExecutionStatus
 import com.gameboost.optimizer.system.DisplayController
 import com.gameboost.optimizer.system.PerformanceController
 import com.gameboost.optimizer.system.PrivilegedExecutionEngine
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Orchestrates gaming optimization sessions, verification, backup, and restoration.
  * Implements the lifecycle specification:
  * GAME START -> CREATE SESSION -> CAPTURE BASELINE -> APPLY -> VERIFY -> ACTIVE -> EXIT -> RESTORE
+ * Enforces Phase 4 & Phase 7 distinction between DISPLAY REFRESH RATE and GAME FRAME RATE.
  */
 class OptimizationEngine(
     private val shizukuManager: ShizukuManager,
@@ -52,7 +55,8 @@ class OptimizationEngine(
         gameProfile: GameProfile,
         profile: OptimizationProfile
     ): OptimizationResult {
-        Log.i(TAG, "Starting optimization session for ${gameProfile.displayName} with target ${profile.targetRefreshRate}Hz")
+        val targetPackage = gameProfile.activePackageName
+        Log.i(TAG, "Starting optimization session for ${gameProfile.displayName} ($targetPackage) with target ${profile.targetRefreshRate}Hz")
 
         val hasPrivilege = privilegedEngine?.isReady == true || shizukuManager.hasPermission()
         if (!hasPrivilege) {
@@ -62,21 +66,28 @@ class OptimizationEngine(
                 requestedRefreshRate = profile.targetRefreshRate,
                 actualRefreshRate = displayController.getDisplayState().currentRefreshRate,
                 statusMessage = "Privileged authorization required",
-                technicalExplanation = "GameBoost needs user-authorized Shizuku or Wireless Debugging to adjust display and system configuration."
+                technicalExplanation = "GameBoost needs user-authorized Shizuku or Wireless Debugging to adjust display and system configuration.",
+                displayRefreshVerified = false,
+                displayRefreshStatusText = "DISCONNECTED",
+                gameFpsVerified = false,
+                gameFpsStatusText = "Privileged connection required to check frame rate",
+                gameModeStatusText = "Unavailable"
             )
             _lastResult.value = res
             return res
         }
 
-        // 1. CAPTURE BASELINE
-        val baseline = activeBackup ?: displayController.createBackup().also {
+        // 1. CAPTURE BASELINE (Phase 6)
+        val baseline = (activeBackup ?: displayController.createBackup()).copy(
+            targetGamePackage = targetPackage
+        ).also {
             activeBackup = it
             Log.d(TAG, "Captured display and system baseline backup: $it")
         }
 
         // 2. CREATE SESSION
         var session = OptimizationSession(
-            gamePackage = gameProfile.activePackageName,
+            gamePackage = targetPackage,
             gameName = gameProfile.displayName,
             selectedProfile = profile,
             requestedRefreshRate = profile.targetRefreshRate,
@@ -85,6 +96,7 @@ class OptimizationEngine(
         )
         _currentSession.value = session
 
+        val allSteps = mutableListOf<OptimizationStepResult>()
         val applied = mutableListOf<String>()
         val failed = mutableListOf<String>()
 
@@ -94,53 +106,84 @@ class OptimizationEngine(
             profile.targetRefreshRate
         }
 
-        // 3. APPLY REFRESH RATE
-        val (displaySuccess, displayMsg) = displayController.applyRefreshRate(effectiveTargetRate)
-        if (displaySuccess) {
-            applied.add(displayMsg)
-        } else {
-            failed.add(displayMsg)
+        // 3. APPLY REFRESH RATE (Phase 3 & Phase 5)
+        val (displaySuccess, displaySteps) = displayController.applyRefreshRateDetailed(effectiveTargetRate)
+        allSteps.addAll(displaySteps)
+        displaySteps.forEach { step ->
+            if (step.status == StepExecutionStatus.ACTIVE) {
+                applied.add(step.details.ifEmpty { step.stepName })
+            } else if (step.status == StepExecutionStatus.FAILED) {
+                failed.add(step.details.ifEmpty { step.stepName })
+            }
         }
 
-        // 4. APPLY PERFORMANCE SETTINGS
-        val (perfApplied, perfFailed) = performanceController.applyPerformanceProfile(
+        // 4. APPLY PERFORMANCE & GAME MODE SETTINGS (Phase 4 & Phase 5)
+        val (perfSteps, perfSummaries) = performanceController.applyPerformanceProfileDetailed(
             profile = profile,
-            targetPackageName = gameProfile.installedPackageName
+            targetPackageName = targetPackage,
+            targetRefreshRate = effectiveTargetRate
         )
-        applied.addAll(perfApplied)
-        failed.addAll(perfFailed)
+        allSteps.addAll(perfSteps)
+        applied.addAll(perfSummaries)
+        perfSteps.filter { it.status == StepExecutionStatus.FAILED }.forEach {
+            failed.add("${it.stepName}: ${it.details}")
+        }
 
-        // 5. VERIFY
+        // 5. PHYSICAL DISPLAY & STATE VERIFICATION (Phase 3, Phase 4, Phase 7)
         val finalDisplayState = displayController.getDisplayState()
-        val verified = displaySuccess && Math.abs(finalDisplayState.currentRefreshRate - effectiveTargetRate) < 1.5f
+        val displayVerified = Math.abs(finalDisplayState.currentRefreshRate - effectiveTargetRate) < 1.5f
 
-        val success = (displaySuccess || perfApplied.isNotEmpty()) && failed.isEmpty()
-        val partialSuccess = displaySuccess || perfApplied.isNotEmpty()
-        val techExplanation = if (!verified && !displaySuccess) {
-            "Display control restricted by device/OEM"
+        val displayStatusText = if (displayVerified) {
+            "${finalDisplayState.currentRefreshRate.toInt()}Hz ACTIVE (Verified)"
+        } else {
+            "${effectiveTargetRate.toInt()}Hz REQUESTED (NOT VERIFIED - Display at ${finalDisplayState.currentRefreshRate.toInt()}Hz)"
+        }
+
+        // Explicit distinction between DISPLAY REFRESH RATE and GAME FRAME RATE (Phase 4 & Phase 7)
+        val gameFpsStatusText = if (displayVerified) {
+            "90 FPS NOT VERIFIED: Display panel confirmed at ${finalDisplayState.currentRefreshRate.toInt()}Hz. In-game Graphics setting must be set to '90 FPS' or 'Extreme+'. Anti-cheat and game binaries are never modified."
+        } else {
+            "60 FPS (Display locked at ${finalDisplayState.currentRefreshRate.toInt()}Hz by OEM compositor policy)"
+        }
+
+        val gameModeStatusText = if (profile.setGameModePerformance) {
+            "Game Mode Performance (GameManager)"
+        } else {
+            "Standard"
+        }
+
+        val overallSuccess = displaySuccess || perfSummaries.isNotEmpty()
+        val techExplanation = if (!displayVerified) {
+            "Display refresh rate could not be locked to ${effectiveTargetRate.toInt()}Hz. Device OEM framework, dynamic thermal limits, or display power manager restricted mode transition."
         } else null
 
         val result = OptimizationResult(
-            isSuccess = partialSuccess,
+            isSuccess = overallSuccess,
             gameName = gameProfile.displayName,
             requestedRefreshRate = effectiveTargetRate,
             actualRefreshRate = finalDisplayState.currentRefreshRate,
             appliedSettings = applied,
             failedSettings = failed,
-            statusMessage = if (verified && failed.isEmpty()) "Optimization active" else if (partialSuccess) "Applied with limitations" else "Optimization failed",
+            statusMessage = if (displayVerified && failed.isEmpty()) "Optimization active" else if (overallSuccess) "Applied with limitations" else "Optimization failed",
             technicalExplanation = techExplanation,
-            verified = verified
+            verified = displayVerified,
+            displayRefreshVerified = displayVerified,
+            displayRefreshStatusText = displayStatusText,
+            gameFpsVerified = false, // Never fake 90 FPS claim without in-game measurement
+            gameFpsStatusText = gameFpsStatusText,
+            gameModeStatusText = gameModeStatusText,
+            optimizationSteps = allSteps
         )
 
-        // 6. ACTIVE
+        // 6. ACTIVE SESSION
         session = session.copy(
             modifiedSettings = applied,
             verificationResult = result,
-            sessionStatus = if (success) SessionStatus.ACTIVE else SessionStatus.FAILED
+            sessionStatus = if (overallSuccess) SessionStatus.ACTIVE else SessionStatus.FAILED
         )
         _currentSession.value = session
-        _isOptimized.value = success
-        _activeGameProfile.value = gameProfile.copy(optimizationActive = success, lastOptimizedTime = System.currentTimeMillis())
+        _isOptimized.value = overallSuccess
+        _activeGameProfile.value = gameProfile.copy(optimizationActive = overallSuccess, lastOptimizedTime = System.currentTimeMillis())
         _lastResult.value = result
 
         return result
@@ -150,7 +193,7 @@ class OptimizationEngine(
         Log.i(TAG, "Restoring previous system configuration")
 
         val backup = activeBackup
-        val activePkg = _activeGameProfile.value?.installedPackageName
+        val targetPkg = backup?.targetGamePackage ?: _activeGameProfile.value?.activePackageName
 
         val restoredItems = mutableListOf<String>()
         val failedItems = mutableListOf<String>()
@@ -158,13 +201,13 @@ class OptimizationEngine(
 
         val (displayRestored, displayMsg) = displayController.restoreDefault(backup)
         if (displayRestored) {
-            restoredItems.add("Refresh rate restored")
+            restoredItems.add("Refresh rate restored to system defaults")
         } else {
             failedItems.add("Refresh rate could not be restored")
             failureReason = displayMsg
         }
 
-        val (perfRestored, perfFailed) = performanceController.restorePerformanceSettings(backup, activePkg)
+        val (perfRestored, perfFailed) = performanceController.restorePerformanceSettings(backup, targetPkg)
         restoredItems.addAll(perfRestored)
         failedItems.addAll(perfFailed)
         if (perfFailed.isNotEmpty() && failureReason == null) {

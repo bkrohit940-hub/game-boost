@@ -13,5 +13,9 @@ data class DisplayStateBackup(
     val windowAnimationScale: String? = null,
     val transitionAnimationScale: String? = null,
     val animatorDurationScale: String? = null,
+    val miuiRefreshRate: String? = null,
+    val refreshRateMode: String? = null,
+    val hasUserPreferredDisplayMode: Boolean = false,
+    val targetGamePackage: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 )

@@ -89,7 +89,8 @@ class GameBoostApp : Application() {
             userPreferencesRepository = userPreferencesRepository,
             optimizationEngine = optimizationEngine,
             privilegedEngine = privilegedEngine,
-            adbConnectionManager = adbConnectionManager
+            adbConnectionManager = adbConnectionManager,
+            displayController = displayController
         )
 
         CoroutineScope(Dispatchers.Main.immediate).launch {

@@ -8,20 +8,20 @@ import androidx.compose.ui.graphics.Color
 // ==========================================
 
 // Surfaces & Backgrounds
-val DarkBg = Color(0xFF0B0D10)
-val SurfaceCard = Color(0xFF14181D)
-val SurfaceElevated = Color(0xFF1B2027)
-val SurfaceCardActive = Color(0xFF222933)
+val DarkBg = Color(0xFF090C10)
+val SurfaceCard = Color(0xFF11161F)
+val SurfaceElevated = Color(0xFF151C26)
+val SurfaceCardActive = Color(0xFF1C2533)
 
 // Borders & Dividers
-val BorderSubtle = Color(0xFF232A34)
-val BorderHighlight = Color(0xFF333E50)
-val BorderActive = Color(0xFF19D3F3)
+val BorderSubtle = Color(0xFF1E2838)
+val BorderHighlight = Color(0xFF2C394E)
+val BorderActive = Color(0xFF00E5FF)
 
-// Accents (Cyan / RedMagic Gaming Turbo)
-val AccentPrimary = Color(0xFF19D3F3)       // Precision Cyan
-val AccentPrimaryDim = Color(0xFF0891B2)
-val AccentPrimaryContainer = Color(0xFF0D2836)
+// Accents (Stitch Cyber Cyan)
+val AccentPrimary = Color(0xFF00E5FF)       // Stitch Electric Cyan
+val AccentPrimaryDim = Color(0xFF00A3B8)
+val AccentPrimaryContainer = Color(0xFF082B38)
 
 val AccentSecondary = Color(0xFF8B95A5)
 val AccentSecondaryContainer = Color(0xFF1E2430)

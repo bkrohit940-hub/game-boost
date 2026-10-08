@@ -67,12 +67,16 @@ class MainViewModel : ViewModel() {
     private val _hardwareStats = MutableStateFlow(repo.getHardwareStats())
     val hardwareStats: StateFlow<HardwareStats> = _hardwareStats.asStateFlow()
 
+    private val _displayDiagnostics = MutableStateFlow<com.gameboost.optimizer.models.DisplayDiagnosticData?>(null)
+    val displayDiagnostics: StateFlow<com.gameboost.optimizer.models.DisplayDiagnosticData?> = _displayDiagnostics.asStateFlow()
+
     val capabilities: DeviceCapabilities by lazy {
         repo.getDeviceCapabilities()
     }
 
     init {
         refreshGames()
+        refreshDisplayDiagnostics()
 
         // Sync with persisted preferences
         viewModelScope.launch {
@@ -134,8 +138,16 @@ class MainViewModel : ViewModel() {
         return repo.getPackageIcon(packageName)
     }
 
+    fun refreshDisplayDiagnostics(targetPackageName: String? = null) {
+        viewModelScope.launch {
+            val pkg = targetPackageName ?: _games.value.firstOrNull { it.id == _selectedGameId.value }?.activePackageName
+            _displayDiagnostics.value = repo.getDisplayDiagnostics(pkg)
+        }
+    }
+
     fun refreshShizuku() {
         repo.refreshShizukuStatus()
+        refreshDisplayDiagnostics()
     }
 
     fun requestShizukuPermission() {

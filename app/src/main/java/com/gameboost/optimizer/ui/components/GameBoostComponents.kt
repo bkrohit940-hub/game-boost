@@ -26,8 +26,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -93,11 +95,11 @@ import com.gameboost.optimizer.theme.TextTertiary
 @Composable
 fun GameBoostLogo(
     modifier: Modifier = Modifier,
-    sizeDp: Dp = 32.dp
+    sizeDp: Dp = 34.dp
 ) {
     Image(
-        painter = painterResource(id = R.drawable.ic_game_boost_emblem),
-        contentDescription = "Game Boost Logo",
+        painter = painterResource(id = R.drawable.ic_game_boost_tactical),
+        contentDescription = "Game Boost Tactical Logo",
         modifier = modifier.size(sizeDp)
     )
 }
@@ -372,11 +374,11 @@ data class NavItem(
 )
 
 val MainNavItems = listOf(
-    NavItem(HomeKey, "Home", Icons.Default.Home),
-    NavItem(GamesKey, "Games", Icons.Default.Apps),
-    NavItem(BoostKey, "Boost", Icons.Default.Bolt),
-    NavItem(DiagnosticsKey, "Diag", Icons.Default.Terminal),
-    NavItem(SettingsKey, "Settings", Icons.Default.Settings)
+    NavItem(HomeKey, "HOME", Icons.Default.Home),
+    NavItem(GamesKey, "GAMES", Icons.Default.SportsEsports),
+    NavItem(BoostKey, "BOOST", Icons.Default.Bolt),
+    NavItem(DiagnosticsKey, "DIAG", Icons.Default.Speed),
+    NavItem(SettingsKey, "SETTINGS", Icons.Default.Tune)
 )
 
 @Composable
@@ -385,38 +387,51 @@ fun GameBoostNavBar(
     onNavigate: (NavKey) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    NavigationBar(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        containerColor = DarkBg,
-        tonalElevation = 0.dp
+        color = DarkBg,
+        border = BorderStroke(1.dp, BorderSubtle)
     ) {
-        MainNavItems.forEach { item ->
-            val isSelected = currentKey::class == item.key::class
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { onNavigate(item.key) },
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.title,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                label = {
-                    Text(
-                        text = item.title,
-                        fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AccentPrimary,
-                    selectedTextColor = AccentPrimary,
-                    indicatorColor = AccentPrimaryContainer,
-                    unselectedIconColor = TextTertiary,
-                    unselectedTextColor = TextTertiary
-                )
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MainNavItems.forEach { item ->
+                val isSelected = currentKey::class == item.key::class
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 3.dp)
+                        .clickable { onNavigate(item.key) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) SurfaceElevated else androidx.compose.ui.graphics.Color.Transparent,
+                    border = if (isSelected) BorderStroke(1.dp, BorderActive) else null
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.title,
+                            tint = if (isSelected) AccentPrimary else TextTertiary,
+                            modifier = Modifier.size(19.dp)
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = item.title,
+                            fontSize = 9.5.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            letterSpacing = 0.5.sp,
+                            color = if (isSelected) AccentPrimary else TextTertiary
+                        )
+                    }
+                }
+            }
         }
     }
 }
