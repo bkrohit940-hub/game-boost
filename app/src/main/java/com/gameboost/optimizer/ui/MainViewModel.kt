@@ -52,6 +52,18 @@ class MainViewModel : ViewModel() {
     private val _games = MutableStateFlow<List<GameProfile>>(emptyList())
     val games: StateFlow<List<GameProfile>> = _games.asStateFlow()
 
+    private val _installedApps = MutableStateFlow<List<com.gameboost.optimizer.models.InstalledAppItem>>(emptyList())
+    val installedApps: StateFlow<List<com.gameboost.optimizer.models.InstalledAppItem>> = _installedApps.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _isGridLayout = MutableStateFlow(true)
+    val isGridLayout: StateFlow<Boolean> = _isGridLayout.asStateFlow()
+
+    private val _appSortOrder = MutableStateFlow("NAME_ASC")
+    val appSortOrder: StateFlow<String> = _appSortOrder.asStateFlow()
+
     private val _selectedGameId = MutableStateFlow<String?>("pubg_global")
     val selectedGameId: StateFlow<String?> = _selectedGameId.asStateFlow()
 
@@ -76,6 +88,7 @@ class MainViewModel : ViewModel() {
 
     init {
         refreshGames()
+        refreshInstalledApps()
         refreshDisplayDiagnostics()
 
         // Sync with persisted preferences
@@ -83,9 +96,13 @@ class MainViewModel : ViewModel() {
             userPreferences.collect { prefs ->
                 _selectedMode.value = prefs.selectedProfileType
                 _selectedRefreshRate.value = prefs.targetRefreshRate
+                _isGridLayout.value = prefs.isGridLayout
+                _appSortOrder.value = prefs.appSortOrder
                 if (prefs.wasShizukuEverAuthorized) {
                     app.shizukuManager.setPreviouslyAuthorized(true)
                 }
+                refreshInstalledApps(prefs.favoritePackages)
+                refreshGames(prefs.favoritePackages)
             }
         }
 
@@ -104,6 +121,43 @@ class MainViewModel : ViewModel() {
                 _hardwareStats.value = stats
             }
         }
+    }
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun toggleGridLayout(isGrid: Boolean) {
+        _isGridLayout.value = isGrid
+        viewModelScope.launch {
+            repo.setGridLayout(isGrid)
+        }
+    }
+
+    fun setAppSortOrder(order: String) {
+        _appSortOrder.value = order
+        viewModelScope.launch {
+            repo.setAppSortOrder(order)
+        }
+    }
+
+    fun toggleFavoriteApp(packageName: String) {
+        viewModelScope.launch {
+            repo.toggleFavoritePackage(packageName)
+        }
+    }
+
+    fun refreshInstalledApps(favorites: Set<String> = userPreferences.value.favoritePackages) {
+        viewModelScope.launch {
+            _installedApps.value = repo.getAllInstalledApps(favorites)
+        }
+    }
+
+    fun launchApplication(packageName: String): Boolean {
+        viewModelScope.launch {
+            repo.addRecentPackage(packageName)
+        }
+        return repo.launchGame(packageName)
     }
 
     fun selectGame(gameId: String) {
@@ -125,8 +179,8 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun refreshGames() {
-        val detected = repo.getDetectedGames()
+    fun refreshGames(favorites: Set<String> = userPreferences.value.favoritePackages) {
+        val detected = repo.getDetectedGames(favorites)
         _games.value = detected
         if (_selectedGameId.value == null || detected.none { it.id == _selectedGameId.value }) {
             val installedFirst = detected.firstOrNull { it.isInstalled } ?: detected.firstOrNull()

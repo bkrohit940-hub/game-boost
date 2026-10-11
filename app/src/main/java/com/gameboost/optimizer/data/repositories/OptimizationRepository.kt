@@ -44,9 +44,12 @@ class OptimizationRepository(
         return deviceCapabilityDetector.detectCapabilities()
     }
 
-    fun getDetectedGames(): List<GameProfile> {
-        val baseGames = GameRegistry.getDefaultSupportedGames()
-        return baseGames.map { game ->
+    fun getAllInstalledApps(favoritePackages: Set<String> = emptySet()): List<com.gameboost.optimizer.models.InstalledAppItem> {
+        return packageDetector.getAllInstalledApps(favoritePackages)
+    }
+
+    fun getDetectedGames(favoritePackages: Set<String> = emptySet()): List<GameProfile> {
+        val baseGames = GameRegistry.getDefaultSupportedGames().map { game ->
             val installedPkg = game.packageNames.firstOrNull { packageDetector.isPackageInstalled(it) }
             val isInstalled = installedPkg != null
             val version = if (installedPkg != null) packageDetector.getPackageVersion(installedPkg) else null
@@ -56,9 +59,49 @@ class OptimizationRepository(
                 installedPackageName = installedPkg,
                 appVersion = version,
                 optimizationActive = optimizationEngine.isOptimized.value &&
-                        optimizationEngine.activeGameProfile.value?.id == game.id
+                        optimizationEngine.activeGameProfile.value?.id == game.id,
+                isFavorite = favoritePackages.contains(installedPkg ?: game.packageNames.firstOrNull() ?: "")
             )
         }
+
+        // Dynamically discover all additional installed gaming packages
+        val allApps = packageDetector.getAllInstalledApps(favoritePackages)
+        val registeredPackages = baseGames.flatMap { it.packageNames }.toSet()
+        val additionalGames = allApps
+            .filter { it.isGame && !registeredPackages.contains(it.packageName) }
+            .map { app ->
+                GameProfile(
+                    id = "game_${app.packageName.replace('.', '_')}",
+                    name = app.label,
+                    region = "Installed Game",
+                    packageNames = listOf(app.packageName),
+                    isInstalled = true,
+                    installedPackageName = app.packageName,
+                    appVersion = app.versionName,
+                    optimizationActive = optimizationEngine.isOptimized.value &&
+                            optimizationEngine.activeGameProfile.value?.installedPackageName == app.packageName,
+                    isFavorite = app.isFavorite,
+                    supportedFeatures = listOf("120Hz Display", "Game Mode API", "Animation Optimization")
+                )
+            }
+
+        return baseGames + additionalGames
+    }
+
+    suspend fun setGridLayout(isGrid: Boolean) {
+        userPreferencesRepository.setGridLayout(isGrid)
+    }
+
+    suspend fun setAppSortOrder(sortOrder: String) {
+        userPreferencesRepository.setAppSortOrder(sortOrder)
+    }
+
+    suspend fun toggleFavoritePackage(packageName: String) {
+        userPreferencesRepository.toggleFavoritePackage(packageName)
+    }
+
+    suspend fun addRecentPackage(packageName: String) {
+        userPreferencesRepository.addRecentPackage(packageName)
     }
 
     fun getHardwareStats(): HardwareStats {

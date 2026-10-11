@@ -45,6 +45,17 @@ val RedCoreDangerContainer = Color(0xFF38070B)
 val RedCoreNeutral = Color(0xFF757575)
 val RedCoreNeutralContainer = Color(0xFF1C1C1C)
 
+// BOBO Launcher Palette (Section 2)
+val BoboBgPrimary = Color(0xFF080808)
+val BoboBgSecondary = Color(0xFF111111)
+val BoboCardSurface = Color(0xFF191919)
+val BoboPrimaryAccent = Color(0xFFFF2538)
+val BoboSecondaryAccent = Color(0xFFFF5260)
+val BoboTextPrimary = Color(0xFFF5F5F5)
+val BoboTextMuted = Color(0xFF9B9B9B)
+val BoboSuccess = Color(0xFF42D982)
+val BoboWarning = Color(0xFFFFB020)
+
 // Backward-compatible aliases for existing references across codebase
 val DarkBg = RedCoreBgPrimary
 val SurfaceCard = RedCoreSurfaceCard

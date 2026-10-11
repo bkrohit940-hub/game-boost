@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.gameboost.optimizer.models.OptimizationProfile
 import com.gameboost.optimizer.models.OptimizationProfileType
@@ -24,7 +25,11 @@ data class AppUserPreferences(
     val isSessionMonitoringEnabled: Boolean = true,
     val isNotificationsEnabled: Boolean = true,
     val showStartupScreen: Boolean = true,
-    val wasShizukuEverAuthorized: Boolean = false
+    val wasShizukuEverAuthorized: Boolean = false,
+    val isGridLayout: Boolean = true,
+    val favoritePackages: Set<String> = emptySet(),
+    val appSortOrder: String = "NAME_ASC",
+    val recentPackages: List<String> = emptyList()
 )
 
 class UserPreferencesRepository(
@@ -40,6 +45,10 @@ class UserPreferencesRepository(
         val KEY_NOTIFICATIONS = booleanPreferencesKey("key_notifications")
         val KEY_SHOW_STARTUP_SCREEN = booleanPreferencesKey("key_show_startup_screen")
         val KEY_SHIZUKU_EVER_AUTH = booleanPreferencesKey("key_shizuku_ever_auth")
+        val KEY_GRID_LAYOUT = booleanPreferencesKey("key_grid_layout")
+        val KEY_FAVORITE_PACKAGES = stringSetPreferencesKey("key_favorite_packages")
+        val KEY_APP_SORT_ORDER = stringPreferencesKey("key_app_sort_order")
+        val KEY_RECENT_PACKAGES = stringPreferencesKey("key_recent_packages")
     }
 
     val userPreferencesFlow: Flow<AppUserPreferences> = context.dataStore.data.map { prefs ->
@@ -57,6 +66,11 @@ class UserPreferencesRepository(
         val notifications = prefs[KEY_NOTIFICATIONS] ?: true
         val startupScreen = prefs[KEY_SHOW_STARTUP_SCREEN] ?: true
         val shizukuEverAuth = prefs[KEY_SHIZUKU_EVER_AUTH] ?: false
+        val gridLayout = prefs[KEY_GRID_LAYOUT] ?: true
+        val favorites = prefs[KEY_FAVORITE_PACKAGES] ?: emptySet()
+        val sortOrder = prefs[KEY_APP_SORT_ORDER] ?: "NAME_ASC"
+        val recentStr = prefs[KEY_RECENT_PACKAGES] ?: ""
+        val recents = if (recentStr.isNotBlank()) recentStr.split(",").filter { it.isNotBlank() } else emptyList()
 
         AppUserPreferences(
             isFirstRunCompleted = firstRun,
@@ -67,7 +81,11 @@ class UserPreferencesRepository(
             isSessionMonitoringEnabled = sessionMonitoring,
             isNotificationsEnabled = notifications,
             showStartupScreen = startupScreen,
-            wasShizukuEverAuthorized = shizukuEverAuth
+            wasShizukuEverAuthorized = shizukuEverAuth,
+            isGridLayout = gridLayout,
+            favoritePackages = favorites,
+            appSortOrder = sortOrder,
+            recentPackages = recents
         )
     }
 
@@ -105,5 +123,37 @@ class UserPreferencesRepository(
 
     suspend fun setShizukuEverAuthorized(authorized: Boolean) {
         context.dataStore.edit { it[KEY_SHIZUKU_EVER_AUTH] = authorized }
+    }
+
+    suspend fun setGridLayout(isGrid: Boolean) {
+        context.dataStore.edit { it[KEY_GRID_LAYOUT] = isGrid }
+    }
+
+    suspend fun setAppSortOrder(sortOrder: String) {
+        context.dataStore.edit { it[KEY_APP_SORT_ORDER] = sortOrder }
+    }
+
+    suspend fun toggleFavoritePackage(packageName: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[KEY_FAVORITE_PACKAGES]?.toMutableSet() ?: mutableSetOf()
+            if (current.contains(packageName)) {
+                current.remove(packageName)
+            } else {
+                current.add(packageName)
+            }
+            prefs[KEY_FAVORITE_PACKAGES] = current
+        }
+    }
+
+    suspend fun addRecentPackage(packageName: String) {
+        context.dataStore.edit { prefs ->
+            val current = (prefs[KEY_RECENT_PACKAGES] ?: "")
+                .split(",")
+                .filter { it.isNotBlank() && it != packageName }
+                .toMutableList()
+            current.add(0, packageName)
+            val trimmed = current.take(10)
+            prefs[KEY_RECENT_PACKAGES] = trimmed.joinToString(",")
+        }
     }
 }

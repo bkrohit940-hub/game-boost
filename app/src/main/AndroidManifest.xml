@@ -23,6 +23,12 @@
 
         <!-- PUBG Mobile KR (Korea/Japan) -->
         <package android:name="com.pubg.krmobile" />
+
+        <!-- Query all launchable apps for BOBO Launcher -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -43,6 +49,19 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Optional Android Home Launcher capability for BOBO Launcher -->
+        <activity
+            android:name=".ui.launcher.BoboHomeActivity"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

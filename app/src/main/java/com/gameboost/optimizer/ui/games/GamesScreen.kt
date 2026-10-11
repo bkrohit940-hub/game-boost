@@ -31,7 +31,10 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -81,7 +84,7 @@ import com.gameboost.optimizer.ui.components.SectionHeader
 import com.gameboost.optimizer.ui.components.StatusBadge
 
 private enum class GameFilterTab {
-    ALL, INSTALLED, SUPPORTED
+    ALL, INSTALLED, FAVORITES, SUPPORTED
 }
 
 /**
@@ -92,7 +95,7 @@ private enum class GameFilterTab {
  * - Compact gaming tiles with actual icons
  * - Real Android package info (no fake data)
  * - Restrained red frame & animated selection state
- * - Search & Filter tabs (ALL, INSTALLED, SUPPORTED)
+ * - Search & Filter tabs (ALL, INSTALLED, FAVORITES, SUPPORTED)
  * - Empty state with clear scan action
  */
 @Composable
@@ -105,6 +108,7 @@ fun GamesScreen(
     onBoostOnly: (String) -> Unit,
     onPlayOnly: (String) -> Unit,
     onGameDetail: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -122,6 +126,7 @@ fun GamesScreen(
             val matchesFilter = when (selectedFilter) {
                 GameFilterTab.ALL -> true
                 GameFilterTab.INSTALLED -> game.isInstalled
+                GameFilterTab.FAVORITES -> game.isFavorite
                 GameFilterTab.SUPPORTED -> game.supportedFeatures.isNotEmpty()
             }
 
@@ -255,6 +260,7 @@ fun GamesScreen(
                                 val label = when (tab) {
                                     GameFilterTab.ALL -> "ALL (${games.size})"
                                     GameFilterTab.INSTALLED -> "INSTALLED ($installedCount)"
+                                    GameFilterTab.FAVORITES -> "FAVORITES"
                                     GameFilterTab.SUPPORTED -> "SUPPORTED"
                                 }
 
@@ -369,11 +375,21 @@ fun GamesScreen(
                                                 overflow = TextOverflow.Ellipsis,
                                                 modifier = Modifier.weight(1f, fill = false)
                                             )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            StatusBadge(
-                                                text = if (isSessionActive) "ACTIVE" else if (game.isInstalled) "INSTALLED" else "NOT INSTALLED",
-                                                state = if (isSessionActive || game.isInstalled) BadgeState.SUCCESS else BadgeState.NEUTRAL
-                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                StatusBadge(
+                                                    text = if (isSessionActive) "ACTIVE" else if (game.isInstalled) "INSTALLED" else "NOT INSTALLED",
+                                                    state = if (isSessionActive || game.isInstalled) BadgeState.SUCCESS else BadgeState.NEUTRAL
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Icon(
+                                                    imageVector = if (game.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                                    contentDescription = "Favorite",
+                                                    tint = if (game.isFavorite) Color(0xFFFFB020) else RedCoreTextMuted,
+                                                    modifier = Modifier
+                                                        .size(16.dp)
+                                                        .clickable { onToggleFavorite(game.activePackageName) }
+                                                )
+                                            }
                                         }
 
                                         Spacer(modifier = Modifier.height(2.dp))

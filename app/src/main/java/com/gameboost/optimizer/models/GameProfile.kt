@@ -11,7 +11,8 @@ data class GameProfile(
     val optimizationActive: Boolean = false,
     val selectedProfile: OptimizationProfile = OptimizationProfile(),
     val lastOptimizedTime: Long? = null,
-    val supportedFeatures: List<String> = listOf("120Hz Display", "Game Mode API", "Animation Optimization")
+    val supportedFeatures: List<String> = listOf("120Hz Display", "Game Mode API", "Animation Optimization"),
+    val isFavorite: Boolean = false
 ) {
     val displayName: String
         get() = name

@@ -58,6 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
 import com.gameboost.optimizer.R
 import com.gameboost.optimizer.data.datastore.AppUserPreferences
 import com.gameboost.optimizer.models.PerformanceMode
@@ -109,6 +112,10 @@ fun SettingsScreen(
     wirelessAdbState: WirelessAdbState? = null,
     adbOperationStatus: String? = null,
     supportedRefreshRates: List<Float> = emptyList(),
+    isGridLayout: Boolean = true,
+    onToggleGridLayout: (Boolean) -> Unit = {},
+    appSortOrder: String = "NAME_ASC",
+    onSetAppSortOrder: (String) -> Unit = {},
     onSelectDefaultProfile: (PerformanceMode) -> Unit = {},
     onSelectPreferredRefreshRate: (Float) -> Unit = {},
     onToggleAutoBoost: (Boolean) -> Unit,
@@ -445,6 +452,87 @@ fun SettingsScreen(
                 }
 
                 // =========================================================================
+                // 5.5. BOBO LAUNCHER PREFERENCES
+                // =========================================================================
+                item {
+                    val context = LocalContext.current
+                    SectionHeader(
+                        title = "BOBO LAUNCHER CONFIGURATION",
+                        subtitle = "Gaming command center drawer & system home options"
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    RedCoreCard(
+                        backgroundColor = RedCoreSurfaceElevated,
+                        borderColor = RedCoreBorder
+                    ) {
+                        SettingToggleRow(
+                            title = "DRAWER GRID LAYOUT",
+                            description = "Display installed apps and games in a multi-column responsive grid instead of a compact list.",
+                            checked = isGridLayout,
+                            onCheckedChange = onToggleGridLayout
+                        )
+
+                        SettingsDivider()
+
+                        SettingToggleRow(
+                            title = "ALPHABETICAL APP SORTING",
+                            description = "Sort applications alphabetically (A to Z) or by recent/installed priority.",
+                            checked = appSortOrder == "NAME_ASC",
+                            onCheckedChange = { isAlpha ->
+                                onSetAppSortOrder(if (isAlpha) "NAME_ASC" else "DEFAULT")
+                            }
+                        )
+
+                        SettingsDivider()
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "DEFAULT HOME LAUNCHER",
+                                    color = RedCoreTextPrimary,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Opt into using BOBO Launcher as your primary Android home screen. Opens Android role settings.",
+                                    color = RedCoreTextSecondary,
+                                    fontSize = 10.5.sp,
+                                    lineHeight = 14.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        try {
+                                            val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    }
+                                },
+                                shape = CutCornerShape(4.dp),
+                                border = BorderStroke(1.dp, BrightActiveRed),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = BrightActiveRed)
+                            ) {
+                                Text("SET HOME", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+
+                // =========================================================================
                 // 6. ABOUT GAMEBOOST (SECTION 10 & 15)
                 // Logo, attribution "Created by Rohit B.K", application specifications
                 // =========================================================================
@@ -483,7 +571,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.height(1.dp))
                                 Text(
-                                    text = "Version 1.0.0 (Production Release)",
+                                    text = "Version 1.0.5 (BOBO Launcher Edition)",
                                     color = RedCoreTextSecondary,
                                     fontSize = 10.sp
                                 )

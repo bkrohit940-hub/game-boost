@@ -50,6 +50,11 @@ fun MainNavigation(
     val selectedRefreshRate by viewModel.selectedRefreshRate.collectAsState()
     val displayDiagnostics by viewModel.displayDiagnostics.collectAsState()
 
+    val installedApps by viewModel.installedApps.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val isGridLayout by viewModel.isGridLayout.collectAsState()
+    val appSortOrder by viewModel.appSortOrder.collectAsState()
+
     // Clean, fast startup branding: starts with StartupKey
     val backStack = rememberNavBackStack(StartupKey)
     val currentKey = backStack.lastOrNull() ?: HomeKey
@@ -147,6 +152,16 @@ fun MainNavigation(
                             selectedRefreshRate = selectedRefreshRate,
                             supportedRefreshRates = viewModel.capabilities.displayState.supportedRefreshRates,
                             isBoosting = isBoosting,
+                            installedApps = installedApps,
+                            searchQuery = searchQuery,
+                            isGridLayout = isGridLayout,
+                            favoritePackages = userPrefs.favoritePackages,
+                            recentPackages = userPrefs.recentPackages,
+                            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+                            onToggleGridLayout = { viewModel.toggleGridLayout(it) },
+                            onToggleFavoriteApp = { viewModel.toggleFavoriteApp(it) },
+                            onLaunchApp = { viewModel.launchApplication(it) },
+                            onRefreshInstalledApps = { viewModel.refreshInstalledApps() },
                             onSelectGame = { viewModel.selectGame(it) },
                             onSelectMode = { viewModel.setPerformanceMode(it) },
                             onSelectRefreshRate = { viewModel.setTargetRefreshRate(it) },
@@ -188,6 +203,16 @@ fun MainNavigation(
                             selectedRefreshRate = selectedRefreshRate,
                             supportedRefreshRates = viewModel.capabilities.displayState.supportedRefreshRates,
                             isBoosting = isBoosting,
+                            installedApps = installedApps,
+                            searchQuery = searchQuery,
+                            isGridLayout = isGridLayout,
+                            favoritePackages = userPrefs.favoritePackages,
+                            recentPackages = userPrefs.recentPackages,
+                            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+                            onToggleGridLayout = { viewModel.toggleGridLayout(it) },
+                            onToggleFavoriteApp = { viewModel.toggleFavoriteApp(it) },
+                            onLaunchApp = { viewModel.launchApplication(it) },
+                            onRefreshInstalledApps = { viewModel.refreshInstalledApps() },
                             onSelectGame = { viewModel.selectGame(it) },
                             onSelectMode = { viewModel.setPerformanceMode(it) },
                             onSelectRefreshRate = { viewModel.setTargetRefreshRate(it) },
@@ -223,7 +248,8 @@ fun MainNavigation(
                             onPlayOnly = { viewModel.launchGame(it) },
                             onGameDetail = { gameId ->
                                 backStack.add(GameDetailKey(gameId))
-                            }
+                            },
+                            onToggleFavorite = { viewModel.toggleFavoriteApp(it) }
                         )
                     }
 
@@ -272,6 +298,10 @@ fun MainNavigation(
                             wirelessAdbState = wirelessAdbState,
                             adbOperationStatus = adbOperationStatus,
                             supportedRefreshRates = viewModel.capabilities.displayState.supportedRefreshRates,
+                            isGridLayout = isGridLayout,
+                            onToggleGridLayout = { viewModel.toggleGridLayout(it) },
+                            appSortOrder = appSortOrder,
+                            onSetAppSortOrder = { viewModel.setAppSortOrder(it) },
                             onSelectDefaultProfile = { viewModel.setPerformanceMode(it) },
                             onSelectPreferredRefreshRate = { viewModel.setTargetRefreshRate(it) },
                             onToggleAutoBoost = { viewModel.toggleAutoBoost(it) },

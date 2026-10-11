@@ -63,6 +63,53 @@ class PackageDetector(
         }
     }
 
+    /**
+     * Retrieves all installed launchable applications for BOBO Launcher.
+     * Complies with Android package visibility via <queries> intent filter.
+     */
+    fun getAllInstalledApps(favoritePackages: Set<String> = emptySet()): List<com.gameboost.optimizer.models.InstalledAppItem> {
+        val mainIntent = android.content.Intent(android.content.Intent.ACTION_MAIN, null).apply {
+            addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveInfos = try {
+            packageManager.queryIntentActivities(mainIntent, 0)
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        val myPackage = context.packageName
+
+        return resolveInfos
+            .filter { it.activityInfo != null && it.activityInfo.packageName != myPackage }
+            .mapNotNull { resolveInfo ->
+                try {
+                    val pkgName = resolveInfo.activityInfo.packageName
+                    val label = resolveInfo.loadLabel(packageManager).toString()
+                    val icon = resolveInfo.loadIcon(packageManager)
+                    val appInfo = resolveInfo.activityInfo.applicationInfo
+                    val isGame = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        (appInfo.category == android.content.pm.ApplicationInfo.CATEGORY_GAME) ||
+                        ((appInfo.flags and android.content.pm.ApplicationInfo.FLAG_IS_GAME) != 0)
+                    } else {
+                        ((appInfo.flags and android.content.pm.ApplicationInfo.FLAG_IS_GAME) != 0)
+                    } || com.gameboost.optimizer.data.gameprofiles.GameRegistry.findGameByPackage(pkgName) != null
+
+                    val version = getPackageVersion(pkgName)
+                    com.gameboost.optimizer.models.InstalledAppItem(
+                        packageName = pkgName,
+                        label = label,
+                        icon = icon,
+                        isGame = isGame,
+                        isFavorite = favoritePackages.contains(pkgName),
+                        versionName = version
+                    )
+                } catch (_: Throwable) {
+                    null
+                }
+            }
+            .distinctBy { it.packageName }
+            .sortedBy { it.label.lowercase() }
+    }
+
     fun launchPackage(packageName: String): Boolean {
         return try {
             val intent = packageManager.getLaunchIntentForPackage(packageName)

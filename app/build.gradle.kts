@@ -11,8 +11,8 @@ android {
         applicationId = "com.gameboost.optimizer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.4"
+        versionCode = 5
+        versionName = "1.0.5"
     }
 
     buildTypes {
@@ -20,6 +20,7 @@ android {
             isMinifyEnabled = false
             isCrunchPngs = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
