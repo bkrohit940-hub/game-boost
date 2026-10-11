@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -33,24 +33,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gameboost.optimizer.models.DeviceCapabilities
 import com.gameboost.optimizer.models.ShizukuStatus
-import com.gameboost.optimizer.theme.AccentPrimary
-import com.gameboost.optimizer.theme.BorderSubtle
-import com.gameboost.optimizer.theme.DarkBg
-import com.gameboost.optimizer.theme.StatusReady
-import com.gameboost.optimizer.theme.StatusWarning
-import com.gameboost.optimizer.theme.SurfaceElevated
-import com.gameboost.optimizer.theme.TextPrimary
-import com.gameboost.optimizer.theme.TextSecondary
-import com.gameboost.optimizer.theme.TextTertiary
+import com.gameboost.optimizer.theme.BrightActiveRed
+import com.gameboost.optimizer.theme.PrimaryGamingRed
+import com.gameboost.optimizer.theme.RedCoreAngularShape
+import com.gameboost.optimizer.theme.RedCoreBgPrimary
+import com.gameboost.optimizer.theme.RedCoreBorder
+import com.gameboost.optimizer.theme.RedCoreBorderActive
+import com.gameboost.optimizer.theme.RedCoreBorderSubtle
+import com.gameboost.optimizer.theme.RedCoreDarkCrimson
+import com.gameboost.optimizer.theme.RedCoreSuccess
+import com.gameboost.optimizer.theme.RedCoreSurfaceElevated
+import com.gameboost.optimizer.theme.RedCoreTextMuted
+import com.gameboost.optimizer.theme.RedCoreTextPrimary
+import com.gameboost.optimizer.theme.RedCoreTextSecondary
+import com.gameboost.optimizer.theme.RedCoreWarning
 import com.gameboost.optimizer.ui.components.BadgeState
 import com.gameboost.optimizer.ui.components.GameBoostLogo
-import com.gameboost.optimizer.ui.components.GlassCard
+import com.gameboost.optimizer.ui.components.RedCoreCard
 import com.gameboost.optimizer.ui.components.StatusBadge
 
 @Composable
@@ -65,7 +71,7 @@ fun FirstLaunchScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = DarkBg
+        color = RedCoreBgPrimary
     ) {
         Column(
             modifier = Modifier
@@ -77,31 +83,40 @@ fun FirstLaunchScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Brand Header with clean emblem
-            GameBoostLogo(sizeDp = 64.dp)
+            GameBoostLogo(sizeDp = 68.dp)
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "GAME BOOST",
-                color = TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.5.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "GAME",
+                    color = RedCoreTextPrimary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp
+                )
+                Text(
+                    text = "BOOST",
+                    color = PrimaryGamingRed,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Performance Center",
-                color = AccentPrimary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.5.sp
+                text = "RED CORE // INITIAL SETUP",
+                color = BrightActiveRed,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Professional Android gaming launcher and performance optimizer for competitive battle royale titles.",
-                color = TextSecondary,
+                text = "Native Android gaming command center and display refresh optimizer for competitive battle royale titles.",
+                color = RedCoreTextSecondary,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -110,18 +125,21 @@ fun FirstLaunchScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (!hasStartedScan) {
-                GlassCard(backgroundColor = SurfaceElevated) {
+                RedCoreCard(
+                    backgroundColor = RedCoreSurfaceElevated,
+                    borderColor = RedCoreBorder
+                ) {
                     Text(
                         text = "DEVICE INITIALIZATION",
-                        color = TextTertiary,
+                        color = RedCoreTextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.8.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Game Boost will inspect your display panel refresh rates, SoC hardware, and Shizuku authorization state.",
-                        color = TextSecondary,
+                        text = "GameBoost will inspect your display panel refresh rates, SoC hardware, and Shizuku authorization state.",
+                        color = RedCoreTextPrimary,
                         fontSize = 12.sp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -130,8 +148,8 @@ fun FirstLaunchScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(46.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                        shape = RoundedCornerShape(8.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGamingRed, contentColor = Color.White),
+                        shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp)
                     ) {
                         Text("SCAN DEVICE CAPABILITIES", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
@@ -139,13 +157,16 @@ fun FirstLaunchScreen(
             } else {
                 AnimatedVisibility(visible = true, enter = fadeIn()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        GlassCard(backgroundColor = SurfaceElevated) {
+                        RedCoreCard(
+                            backgroundColor = RedCoreSurfaceElevated,
+                            borderColor = RedCoreBorderActive
+                        ) {
                             Text(
                                 text = "HARDWARE SCAN RESULTS",
-                                color = TextTertiary,
+                                color = BrightActiveRed,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.8.sp
                             )
                             Spacer(modifier = Modifier.height(10.dp))
 
@@ -153,8 +174,8 @@ fun FirstLaunchScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Device", color = TextSecondary, fontSize = 12.sp)
-                                Text("${capabilities.brand} ${capabilities.model}", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Device", color = RedCoreTextSecondary, fontSize = 12.sp)
+                                Text("${capabilities.brand} ${capabilities.model}", color = RedCoreTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -163,8 +184,8 @@ fun FirstLaunchScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Display Panel", color = TextSecondary, fontSize = 12.sp)
-                                Text("${capabilities.displayState.maxRefreshRate.toInt()}Hz Max", color = AccentPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Display Panel", color = RedCoreTextSecondary, fontSize = 12.sp)
+                                Text("${capabilities.displayState.maxRefreshRate.toInt()}Hz Max", color = BrightActiveRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -173,8 +194,8 @@ fun FirstLaunchScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("System Memory", color = TextSecondary, fontSize = 12.sp)
-                                Text(capabilities.formattedRam, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text("System Memory", color = RedCoreTextSecondary, fontSize = 12.sp)
+                                Text(capabilities.formattedRam, color = RedCoreTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -183,7 +204,7 @@ fun FirstLaunchScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Shizuku Status", color = TextSecondary, fontSize = 12.sp)
+                                Text("Shizuku Status", color = RedCoreTextSecondary, fontSize = 12.sp)
                                 StatusBadge(
                                     text = if (shizukuStatus.isReady) "READY" else "NOT READY",
                                     state = if (shizukuStatus.isReady) BadgeState.SUCCESS else BadgeState.WARNING
@@ -199,8 +220,8 @@ fun FirstLaunchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                                shape = RoundedCornerShape(10.dp)
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGamingRed, contentColor = Color.White),
+                                shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
                             ) {
                                 Text("CONFIGURE SHIZUKU (RECOMMENDED)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
@@ -212,10 +233,11 @@ fun FirstLaunchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(44.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                                shape = RoundedCornerShape(10.dp)
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = RedCoreTextSecondary),
+                                shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp),
+                                border = BorderStroke(1.dp, RedCoreBorder)
                             ) {
-                                Text("SKIP TO PERFORMANCE CENTER", fontSize = 11.sp)
+                                Text("SKIP TO COMMAND CENTER", fontSize = 11.sp)
                             }
                         } else {
                             Button(
@@ -223,10 +245,10 @@ fun FirstLaunchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusReady, contentColor = DarkBg),
-                                shape = RoundedCornerShape(10.dp)
+                                colors = ButtonDefaults.buttonColors(containerColor = RedCoreSuccess, contentColor = Color.Black),
+                                shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
                             ) {
-                                Text("ENTER GAME BOOST", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("ENTER GAME BOOST COMMAND CENTER", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }

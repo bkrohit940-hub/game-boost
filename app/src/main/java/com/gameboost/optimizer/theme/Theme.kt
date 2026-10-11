@@ -1,38 +1,49 @@
 package com.gameboost.optimizer.theme
 
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+// =========================================================================
+// GAMEBOOST RED CORE — SHAPES & TOKENS
+// =========================================================================
+
+val RedCoreAngularShape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
 
 private val GameBoostDarkColorScheme = darkColorScheme(
-    primary = CyberCyan,
-    onPrimary = Color(0xFF00363D),
-    primaryContainer = CyberCyanContainer,
-    onPrimaryContainer = CyberCyan,
+    primary = RedCoreGamingRed,
+    onPrimary = Color.White,
+    primaryContainer = RedCoreDarkCrimson,
+    onPrimaryContainer = RedCoreBrightRed,
 
-    secondary = ElectricPurple,
+    secondary = RedCoreDeepRed,
     onSecondary = Color.White,
-    secondaryContainer = ElectricPurpleContainer,
-    onSecondaryContainer = ElectricPurple,
+    secondaryContainer = RedCoreSurfaceElevated,
+    onSecondaryContainer = RedCoreTextPrimary,
 
-    tertiary = NeonGreen,
-    onTertiary = Color(0xFF003816),
-    tertiaryContainer = NeonGreenContainer,
-    onTertiaryContainer = NeonGreen,
+    tertiary = RedCoreSuccess,
+    onTertiary = Color.Black,
+    tertiaryContainer = RedCoreSuccessContainer,
+    onTertiaryContainer = RedCoreSuccess,
 
-    background = ObsidianBg,
-    onBackground = TextWhite,
+    background = RedCoreBgPrimary,
+    onBackground = RedCoreTextPrimary,
 
-    surface = CardNavy,
-    onSurface = TextWhite,
-    surfaceVariant = CardNavyElevated,
-    onSurfaceVariant = TextGray,
+    surface = RedCoreSurfaceCard,
+    onSurface = RedCoreTextPrimary,
+    surfaceVariant = RedCoreSurfaceElevated,
+    onSurfaceVariant = RedCoreTextSecondary,
 
-    outline = CardBorder,
-    error = NeonRed,
-    errorContainer = NeonRedContainer,
-    onError = Color.White
+    outline = RedCoreBorder,
+    outlineVariant = RedCoreBorderSubtle,
+
+    error = RedCoreDanger,
+    errorContainer = RedCoreDangerContainer,
+    onError = Color.White,
+    onErrorContainer = RedCoreBrightRed
 )
 
 @Composable

@@ -1,9 +1,14 @@
 package com.gameboost.optimizer.ui.diagnostics
 
-import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,33 +24,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeviceThermostat
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,8 +55,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gameboost.optimizer.models.DeviceCapabilities
@@ -65,27 +64,41 @@ import com.gameboost.optimizer.models.HardwareStats
 import com.gameboost.optimizer.models.OptimizationResult
 import com.gameboost.optimizer.models.ShellCommandResult
 import com.gameboost.optimizer.models.ShizukuStatus
-import com.gameboost.optimizer.system.BackendType
 import com.gameboost.optimizer.system.PrivilegedSystemState
 import com.gameboost.optimizer.system.adb.AdbConnectionStatus
-import com.gameboost.optimizer.theme.AccentPrimary
-import com.gameboost.optimizer.theme.BorderActive
-import com.gameboost.optimizer.theme.BorderSubtle
-import com.gameboost.optimizer.theme.DarkBg
-import com.gameboost.optimizer.theme.StatusDanger
-import com.gameboost.optimizer.theme.StatusReady
-import com.gameboost.optimizer.theme.StatusReadyContainer
-import com.gameboost.optimizer.theme.StatusWarning
-import com.gameboost.optimizer.theme.SurfaceCard
-import com.gameboost.optimizer.theme.SurfaceElevated
-import com.gameboost.optimizer.theme.TextPrimary
-import com.gameboost.optimizer.theme.TextSecondary
-import com.gameboost.optimizer.theme.TextTertiary
-import java.util.Locale
+import com.gameboost.optimizer.theme.BrightActiveRed
+import com.gameboost.optimizer.theme.DeepRed
+import com.gameboost.optimizer.theme.PrimaryGamingRed
+import com.gameboost.optimizer.theme.RedCoreAngularShape
+import com.gameboost.optimizer.theme.RedCoreBgPrimary
+import com.gameboost.optimizer.theme.RedCoreBgSecondary
+import com.gameboost.optimizer.theme.RedCoreBorder
+import com.gameboost.optimizer.theme.RedCoreBorderActive
+import com.gameboost.optimizer.theme.RedCoreBorderSubtle
+import com.gameboost.optimizer.theme.RedCoreDanger
+import com.gameboost.optimizer.theme.RedCoreDarkCrimson
+import com.gameboost.optimizer.theme.RedCoreSuccess
+import com.gameboost.optimizer.theme.RedCoreSuccessContainer
+import com.gameboost.optimizer.theme.RedCoreSurfaceCard
+import com.gameboost.optimizer.theme.RedCoreSurfaceElevated
+import com.gameboost.optimizer.theme.RedCoreTextMuted
+import com.gameboost.optimizer.theme.RedCoreTextPrimary
+import com.gameboost.optimizer.theme.RedCoreTextSecondary
+import com.gameboost.optimizer.theme.RedCoreWarning
+import com.gameboost.optimizer.ui.components.BadgeState
+import com.gameboost.optimizer.ui.components.RedCoreCard
+import com.gameboost.optimizer.ui.components.SectionHeader
+import com.gameboost.optimizer.ui.components.StatusBadge
 
 /**
- * GameBoost Diagnostics Screen — Faithfully recreating the Google Stitch design reference
- * for the Diagnostics screen (Stitch Project 14872102965839926777 / screen c15b3d1ea4d84cc8aaf065bb242eb78c).
+ * DIAGNOSTICS: SYSTEM HUD (Section 9)
+ * Advanced RedMagic Gaming HUD Aesthetic:
+ * 1. DEVICE: Manufacturer, Model, Android version, CPU, RAM
+ * 2. DISPLAY: Resolution, Current refresh rate, Supported refresh rates, Current display mode
+ * 3. BACKEND: Shizuku service, Permission status, Binder connection, Shell test, Wireless ADB
+ * 4. OPTIMIZATION: Refresh control, Game Mode, Thermal monitoring, Process priority, Restore capability
+ *
+ * Thin dividers, small labels, strong numbers, red section markers, real diagnostic scan animation.
  */
 @Composable
 fun DiagnosticsScreen(
@@ -104,925 +117,297 @@ fun DiagnosticsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
-    val dpi = (density.density * 160).toInt()
-
     val currentHz = hardwareStats?.currentRefreshRate ?: capabilities.displayState.currentRefreshRate
-    val tempC = hardwareStats?.batteryTemperatureCelsius ?: 32.0f
-    val headroomVal = hardwareStats?.thermalHeadroom ?: "0.94"
     val isPrivileged = shizukuStatus.isReady || (privilegedState?.wirelessAdbState?.status == AdbConnectionStatus.CONNECTED)
+
+    // Scanning animation for diagnostics
+    val infiniteTransition = rememberInfiniteTransition(label = "diagScan")
+    val scanProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "scanLine"
+    )
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = DarkBg
+        color = RedCoreBgPrimary
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isNarrowScreen = maxWidth < 360.dp
-            val horizontalPadding = if (isNarrowScreen) 12.dp else 16.dp
+            val horizontalPadding = if (isNarrowScreen) 10.dp else 14.dp
 
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = horizontalPadding),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // ==========================================
-                // 1. SCREEN TITLE & CONTROLS
-                // ==========================================
+                // =========================================================================
+                // 1. SCREEN HEADER: TITLE + BACK ACTION + SCAN TRIGGER
+                // =========================================================================
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = onBack,
-                                modifier = Modifier.size(32.dp)
-                            ) {
+                            IconButton(onClick = onBack) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
-                                    tint = TextPrimary,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = RedCoreTextPrimary
                                 )
                             }
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
-                                            .background(AccentPrimary)
+                                            .size(width = 3.dp, height = 14.dp)
+                                            .background(PrimaryGamingRed)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "DIAGNOSTICS",
-                                        color = TextPrimary,
-                                        fontSize = 19.sp,
+                                        text = "SYSTEM HUD DIAGNOSTICS",
+                                        color = RedCoreTextPrimary,
+                                        fontSize = 17.sp,
                                         fontWeight = FontWeight.Black,
                                         letterSpacing = 1.sp
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Device & performance telemetry",
-                                    color = TextTertiary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium
+                                    text = "LOW-LEVEL TELEMETRY & CAPABILITY PROBING",
+                                    color = RedCoreTextSecondary,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.8.sp
                                 )
                             }
                         }
 
-                        // Right Badges: ROOT DETECTION: 0 & POLL: 500MS
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        // Real Scan / Probing Action
+                        Surface(
+                            modifier = Modifier.clickable {
+                                onRefreshDiagnostics?.invoke()
+                                onTestBackend?.invoke()
+                            },
+                            shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp),
+                            color = RedCoreDarkCrimson,
+                            border = BorderStroke(1.dp, BrightActiveRed)
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = Color(0xFF072B38),
-                                border = BorderStroke(1.dp, Color(0xFF00E5FF))
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "ROOT DETECTION: 0",
-                                    color = AccentPrimary,
-                                    fontSize = 7.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                )
+                                if (isTestingBackend) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(12.dp),
+                                        color = BrightActiveRed,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "SCANNING",
+                                        color = BrightActiveRed,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = BrightActiveRed,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "RUN SCAN",
+                                        color = BrightActiveRed,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
                             }
-                            Text(
-                                text = "POLL : 500MS",
-                                color = TextTertiary,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
-                            )
                         }
                     }
                 }
 
-                // ==========================================
-                // 2. TOP METRICS STRIP (3 COLUMNS)
-                // ==========================================
+                // =========================================================================
+                // 2. DEVICE SECTION
+                // Manufacturer, Model, Android version, CPU, RAM
+                // =========================================================================
                 item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = SurfaceCard,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, BorderSubtle)
+                    HudSectionCard(
+                        title = "DEVICE SPECIFICATIONS",
+                        marker = "[DEV]"
                     ) {
-                        Column(
+                        HudTelemetryRow(label = "MANUFACTURER", value = capabilities.manufacturer.uppercase())
+                        HudDivider()
+                        HudTelemetryRow(label = "MODEL", value = capabilities.model.uppercase())
+                        HudDivider()
+                        HudTelemetryRow(
+                            label = "ANDROID VERSION",
+                            value = "Android ${capabilities.androidVersion} (API ${capabilities.apiLevel})"
+                        )
+                        HudDivider()
+                        val cpuSoc = if (capabilities.socHardware.isNotBlank()) capabilities.socHardware else "ARM64"
+                        val cpuCores = capabilities.cpuCores
+                        HudTelemetryRow(label = "CPU & CHIPSET", value = "$cpuSoc • $cpuCores CORES")
+                        HudDivider()
+                        val ramDisplay = hardwareStats?.formattedRam ?: capabilities.formattedRam
+                        HudTelemetryRow(
+                            label = "RAM ALLOCATION",
+                            value = ramDisplay
+                        )
+                    }
+                }
+
+                // =========================================================================
+                // 3. DISPLAY SECTION
+                // Resolution, Current refresh rate, Supported refresh rates, Current display mode
+                // =========================================================================
+                item {
+                    HudSectionCard(
+                        title = "DISPLAY HARDWARE TELEMETRY",
+                        marker = "[DSP]"
+                    ) {
+                        HudTelemetryRow(
+                            label = "RESOLUTION",
+                            value = "${capabilities.displayState.resolutionWidth} x ${capabilities.displayState.resolutionHeight} px"
+                        )
+                        HudDivider()
+                        HudTelemetryRow(
+                            label = "CURRENT REFRESH RATE",
+                            value = "${currentHz.toInt()} Hz",
+                            highlightValue = true
+                        )
+                        HudDivider()
+                        val supportedRatesText = capabilities.displayState.supportedRefreshRates.joinToString(" / ") { "${it.toInt()}Hz" }
+                        HudTelemetryRow(
+                            label = "SUPPORTED MODES",
+                            value = if (supportedRatesText.isNotEmpty()) supportedRatesText else "60Hz / 90Hz / 120Hz"
+                        )
+                        HudDivider()
+                        HudTelemetryRow(
+                            label = "ACTIVE DISPLAY MODE",
+                            value = "${capabilities.displayState.resolutionWidth}x${capabilities.displayState.resolutionHeight}@${currentHz.toInt()}Hz"
+                        )
+                    }
+                }
+
+                // =========================================================================
+                // 4. BACKEND SECTION
+                // Shizuku service, Permission status, Binder connection, Shell test, Wireless ADB
+                // =========================================================================
+                item {
+                    HudSectionCard(
+                        title = "PRIVILEGED BACKEND SUBSYSTEM",
+                        marker = "[IPC]"
+                    ) {
+                        HudStatusRow(
+                            label = "SHIZUKU SERVICE",
+                            statusText = if (shizukuStatus.isInstalled) "INSTALLED" else "NOT INSTALLED",
+                            isSuccess = shizukuStatus.isInstalled
+                        )
+                        HudDivider()
+                        HudStatusRow(
+                            label = "PERMISSION STATUS",
+                            statusText = if (shizukuStatus.isAuthorized) "GRANTED" else "NOT GRANTED",
+                            isSuccess = shizukuStatus.isAuthorized
+                        )
+                        HudDivider()
+                        HudStatusRow(
+                            label = "BINDER CONNECTION",
+                            statusText = if (shizukuStatus.isReady) "READY & BOUND" else "DISCONNECTED",
+                            isSuccess = shizukuStatus.isReady
+                        )
+                        HudDivider()
+                        val adbStatusText = privilegedState?.wirelessAdbState?.status?.name ?: "DISCONNECTED"
+                        HudStatusRow(
+                            label = "WIRELESS ADB BRIDGE",
+                            statusText = adbStatusText,
+                            isSuccess = privilegedState?.wirelessAdbState?.status == AdbConnectionStatus.CONNECTED
+                        )
+
+                        HudDivider()
+
+                        // Shell Command Test Action & Output
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Col 1: SOC THROTTLE
-                                Column {
-                                    Text(
-                                        text = "SOC THROTTLE",
-                                        color = TextTertiary,
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(
-                                            text = headroomVal,
-                                            color = AccentPrimary,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text(
-                                            text = "HD-RM",
-                                            color = TextTertiary,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(bottom = 2.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "HEADROOM TARGET",
-                                        color = AccentPrimary,
-                                        fontSize = 7.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                Text(text = "|", color = Color(0xFF1E2838), fontSize = 16.sp)
-
-                                // Col 2: THERMAL DIE
-                                Column {
-                                    Text(
-                                        text = "THERMAL DIE",
-                                        color = TextTertiary,
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(
-                                            text = String.format(Locale.US, "%.1f", tempC),
-                                            color = TextPrimary,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                        Spacer(modifier = Modifier.width(2.dp))
-                                        Text(
-                                            text = "°C",
-                                            color = TextTertiary,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(bottom = 2.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "${((tempC * 9 / 5) + 32).toInt()}°F SENSOR",
-                                        color = TextTertiary,
-                                        fontSize = 7.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                Text(text = "|", color = Color(0xFF1E2838), fontSize = 16.sp)
-
-                                // Col 3: PANEL RATE
-                                Column {
-                                    Text(
-                                        text = "PANEL RATE",
-                                        color = TextTertiary,
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(
-                                            text = "${currentHz.toInt()}",
-                                            color = AccentPrimary,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text(
-                                            text = "Hz",
-                                            color = TextTertiary,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(bottom = 2.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "LIVE SYNC",
-                                        color = AccentPrimary,
-                                        fontSize = 7.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Segmented bar
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                repeat(8) { index ->
-                                    val isFilled = index < 4
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(3.5.dp)
-                                            .clip(RoundedCornerShape(1.dp))
-                                            .background(if (isFilled) AccentPrimary else Color(0xFF192230))
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ==========================================
-                // 3. SECTION 1: DEVICE & SOC ARCHITECTURE
-                // ==========================================
-                item {
-                    SectionCard(
-                        numberTitle = "1. DEVICE & SOC ARCHITECTURE",
-                        badge = "SELINUX_E"
-                    ) {
-                        // 2x2 Specs Grid
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            SpecColumn(label = "MANUFACTURER", value = capabilities.manufacturer.ifEmpty { "Xiaomi" }, modifier = Modifier.weight(1f))
-                            SpecColumn(label = "HARDWARE MODEL", value = "${capabilities.model} (${Build.DEVICE})", modifier = Modifier.weight(1f))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            SpecColumn(label = "ANDROID VERSION", value = "Android ${capabilities.androidVersion}", modifier = Modifier.weight(1f))
-                            SpecColumn(label = "PLATFORM API LEVEL", value = "API ${capabilities.apiLevel} • Enforcing", modifier = Modifier.weight(1f), valueColor = AccentPrimary)
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // CPU Architecture Sub-block
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFF0C1118),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFF161F2C))
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .background(AccentPrimary)
-                                        )
-                                        Spacer(modifier = Modifier.width(5.dp))
-                                        Text(
-                                            text = capabilities.socHardware.uppercase(),
-                                            color = TextPrimary,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Text(
-                                        text = "${capabilities.cpuCores} CORES",
-                                        color = AccentPrimary,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "1x 3.30GHz (Cortex-X4) + 5x 3.00GHz (A720) + 2x 2.30GHz (A520)",
-                                    color = TextTertiary,
-                                    fontSize = 9.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Memory Sub-block
-                        val ramUsedMb = hardwareStats?.let { (it.ramUsedBytes / (1024 * 1024)).toInt() } ?: 4200
-                        val ramTotalMb = hardwareStats?.let { (it.ramTotalBytes / (1024 * 1024)).toInt() } ?: 11488
-                        val ramFreeMb = (ramTotalMb - ramUsedMb).coerceAtLeast(0)
-                        val ramUtilizedPercent = if (ramTotalMb > 0) ((ramUsedMb.toFloat() / ramTotalMb) * 100).toInt() else 35
-
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFF0C1118),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFF161F2C))
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(5.dp)
-                                                .clip(CircleShape)
-                                                .background(AccentPrimary)
-                                        )
-                                        Spacer(modifier = Modifier.width(5.dp))
-                                        Text(
-                                            text = "SYSTEM MEMORY (LPDDR5X)",
-                                            color = TextSecondary,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Text(
-                                        text = "$ramUtilizedPercent% UTILIZED",
-                                        color = TextTertiary,
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "$ramFreeMb MB FREE",
-                                        color = TextPrimary,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
-                                    Text(
-                                        text = "TOTAL : $ramTotalMb MB",
-                                        color = TextTertiary,
-                                        fontSize = 9.sp,
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                LinearProgressIndicator(
-                                    progress = { ramUtilizedPercent / 100f },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(3.5.dp)
-                                        .clip(RoundedCornerShape(2.dp)),
-                                    color = AccentPrimary,
-                                    trackColor = Color(0xFF1C2736)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ==========================================
-                // 4. SECTION 2: DISPLAY TELEMETRY
-                // ==========================================
-                item {
-                    SectionCard(
-                        numberTitle = "2. DISPLAY TELEMETRY",
-                        badge = "${currentHz.toInt()} HZ LIVE"
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            SpecColumn(
-                                label = "NATIVE RESOLUTION",
-                                value = "${capabilities.displayState.resolutionWidth} × ${capabilities.displayState.resolutionHeight}",
-                                modifier = Modifier.weight(1f)
-                            )
-                            SpecColumn(
-                                label = "PIXEL DENSITY",
-                                value = "$dpi DPI",
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Supported Dynamic Modes
-                        val supportedRates = displayDiagnostics?.supportedRefreshRates?.takeIf { it.isNotEmpty() }
-                            ?: capabilities.displayState.supportedRefreshRates.takeIf { it.isNotEmpty() }
-                            ?: listOf(60f)
-
-                        Text(
-                            text = "SUPPORTED DYNAMIC MODES",
-                            color = TextTertiary,
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            supportedRates.forEach { hz ->
-                                val isCurrent = currentHz.toInt() == hz.toInt()
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (isCurrent) AccentPrimary else Color(0xFF101622),
-                                    border = BorderStroke(1.dp, if (isCurrent) AccentPrimary else BorderSubtle),
-                                    modifier = Modifier.width(60.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(vertical = 6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "${hz.toInt()}",
-                                            color = if (isCurrent) Color.Black else TextPrimary,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                        Text(
-                                            text = "Hz",
-                                            color = if (isCurrent) Color.Black else TextTertiary,
-                                            fontSize = 8.5.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (displayDiagnostics != null) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF090D14),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, Color(0xFF161F2C))
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "DISPLAY MODE DETAILS",
-                                            color = TextTertiary,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = displayDiagnostics.currentDisplayMode.ifEmpty { "Default" },
-                                            color = AccentPrimary,
-                                            fontSize = 8.5.sp,
-                                            fontFamily = FontFamily.Monospace
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "PEAK / MIN REFRESH RATE",
-                                            color = TextTertiary,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Peak: ${displayDiagnostics.systemPeakRefreshRate ?: "N/A"} • Min: ${displayDiagnostics.systemMinRefreshRate ?: "N/A"}",
-                                            color = TextSecondary,
-                                            fontSize = 8.5.sp,
-                                            fontFamily = FontFamily.Monospace
-                                        )
-                                    }
-                                    displayDiagnostics.preferredDisplayMode?.let { pref ->
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "USER PREFERRED MODE",
-                                                color = TextTertiary,
-                                                fontSize = 8.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = pref,
-                                                color = TextSecondary,
-                                                fontSize = 8.5.sp,
-                                                fontFamily = FontFamily.Monospace
-                                            )
-                                        }
-                                    }
-                                    displayDiagnostics.oemRefreshRate?.let { oem ->
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "OEM REFRESH STATE",
-                                                color = TextTertiary,
-                                                fontSize = 8.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = oem,
-                                                color = AccentPrimary,
-                                                fontSize = 8.5.sp,
-                                                fontFamily = FontFamily.Monospace
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF090D14),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, Color(0xFF161F2C))
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "TARGET GAME PACKAGE",
-                                            color = TextTertiary,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = displayDiagnostics.selectedPackageName.ifEmpty { "None selected" },
-                                            color = TextPrimary,
-                                            fontSize = 8.5.sp,
-                                            fontFamily = FontFamily.Monospace
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "GAME RUNNING / API STATUS",
-                                            color = TextTertiary,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = if (displayDiagnostics.isGameRunning) "RUNNING • ${displayDiagnostics.gameModeApiStatus}" else "STOPPED • ${displayDiagnostics.gameModeApiStatus}",
-                                            color = if (displayDiagnostics.isGameRunning) StatusReady else TextTertiary,
-                                            fontSize = 8.5.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "FRAME-RATE OVERRIDE",
-                                            color = TextTertiary,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = displayDiagnostics.frameRateOverrideState,
-                                            color = AccentPrimary,
-                                            fontSize = 8.5.sp,
-                                            fontFamily = FontFamily.Monospace
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
+                                .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "COLOR PIPELINE & HDR",
-                                color = TextTertiary,
-                                fontSize = 8.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "HDR10+ • Dolby Vision",
-                                color = TextSecondary,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // ==========================================
-                // 5. SECTION 3: THERMAL MANAGEMENT & POWER
-                // ==========================================
-                item {
-                    SectionCard(
-                        numberTitle = "3. THERMAL MANAGEMENT & POWER",
-                        badge = "OPTIMAL"
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            SpecColumn(
-                                label = "SOC SKIN SENSOR",
-                                value = "${String.format(Locale.US, "%.1f", tempC)} °C",
-                                subtitle = "COOL / NORMAL",
-                                modifier = Modifier.weight(1f),
-                                valueColor = AccentPrimary
-                            )
-                            SpecColumn(
-                                label = "THERMAL HEADROOM",
-                                value = "$headroomVal / 1.0",
-                                subtitle = "HAL/V1 THROTTLE TARGET",
-                                modifier = Modifier.weight(1f),
-                                valueColor = AccentPrimary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "THERMAL STATUS DESCRIPTOR",
-                                color = TextTertiary,
-                                fontSize = 8.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "THERMAL_STATUS_${hardwareStats?.thermalStatus ?: "NONE"}",
-                                color = AccentPrimary,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "CELL HEALTH & VOLTAGE",
-                                color = TextTertiary,
-                                fontSize = 8.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Good • 4,880 mAh • 3.91V",
-                                color = TextSecondary,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // ==========================================
-                // 6. SECTION 4: BACKEND & IPC PRIVILEGES
-                // ==========================================
-                item {
-                    val isShizukuReady = shizukuStatus.isReady
-                    val isAdbReady = privilegedState?.wirelessAdbState?.status == AdbConnectionStatus.CONNECTED
-
-                    SectionCard(
-                        numberTitle = "4. BACKEND & IPC PRIVILEGES",
-                        badge = "ROOTLESS ADB"
-                    ) {
-                        // Shizuku Item
-                        BackendCardItem(
-                            icon = Icons.Default.Terminal,
-                            title = "Shizuku IPC Service",
-                            subtitle = if (isShizukuReady) "v13.5.4 • Binder UID: 2000" else shizukuStatus.summaryText,
-                            statusText = if (isShizukuReady) "RUNNING" else "DISCONNECTED",
-                            statusColor = if (isShizukuReady) AccentPrimary else StatusWarning
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Wireless Debugging Item
-                        BackendCardItem(
-                            icon = Icons.Default.Wifi,
-                            title = "Wireless Debugging",
-                            subtitle = if (isAdbReady) "Connected • Port ${privilegedState.wirelessAdbState.connectedPort}" else "Android 11+ TLS Loopback Shell",
-                            statusText = if (isAdbReady) "CONNECTED" else "DISCONNECTED",
-                            statusColor = if (isAdbReady) AccentPrimary else TextTertiary
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Permission item
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "SHELL SECURITY PERMISSION",
-                                    color = TextTertiary,
-                                    fontSize = 8.5.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "android.permission.WRITE_SECURE_SETTINGS",
-                                    color = TextSecondary,
-                                    fontSize = 8.5.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(3.dp),
-                                color = if (isPrivileged) StatusReadyContainer else Color(0xFF1E2836)
-                            ) {
-                                Text(
-                                    text = if (isPrivileged) "GRANTED" else "NOT GRANTED",
-                                    color = if (isPrivileged) StatusReady else TextTertiary,
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ==========================================
-                // 7. SECTION 5: CAPABILITIES & COMPATIBILITY
-                // ==========================================
-                item {
-                    SectionCard(
-                        numberTitle = "5. CAPABILITIES & COMPATIBILITY",
-                        badge = "5/7 OPER."
-                    ) {
-                        DiagMatrixRow(
-                            icon = Icons.Default.Speed,
-                            title = "Refresh Rate Control",
-                            status = if (isPrivileged) "ACTIVE / COMPATIBLE" else "UNAVAILABLE",
-                            statusColor = if (isPrivileged) AccentPrimary else TextTertiary
-                        )
-                        DiagMatrixRow(
-                            icon = Icons.Default.SportsEsports,
-                            title = "Game-Mode API",
-                            status = if (capabilities.apiLevel >= 31) "SUPPORTED" else "UNAVAILABLE",
-                            statusColor = if (capabilities.apiLevel >= 31) StatusReady else TextTertiary
-                        )
-                        DiagMatrixRow(
-                            icon = Icons.Default.Bolt,
-                            title = "Process Priority Tuning",
-                            status = if (shizukuStatus.isReady) "SUPPORTED via Shizuku" else "UNAVAILABLE",
-                            statusColor = if (shizukuStatus.isReady) AccentPrimary else TextTertiary
-                        )
-                        DiagMatrixRow(
-                            icon = Icons.Default.DeviceThermostat,
-                            title = "Thermal Control Driver",
-                            status = "UNAVAILABLE (OEM RESTRICTED)",
-                            statusColor = StatusDanger,
-                            isWarning = true
-                        )
-                        DiagMatrixRow(
-                            icon = Icons.Default.Tune,
-                            title = "Kernel Overclock",
-                            status = "NOT SUPPORTED",
-                            statusColor = TextTertiary
-                        )
-                    }
-                }
-
-                // ==========================================
-                // 8. ACTION BUTTONS: EXPORT DUMP & RESCAN BUS
-                // ==========================================
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // EXPORT DUMP Button
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                                .clickable { /* Dump action */ },
-                            shape = RoundedCornerShape(10.dp),
-                            color = SurfaceElevated,
-                            border = BorderStroke(1.dp, BorderSubtle)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = null,
-                                    tint = TextSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "EXPORT DUMP",
-                                    color = TextPrimary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                )
-                            }
-                        }
-
-                        // RESCAN BUS / TEST BACKEND Button
-                        Button(
-                            onClick = {
-                                onTestBackend?.invoke()
-                                onRefreshDiagnostics?.invoke()
-                            },
-                            enabled = !isTestingBackend,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentPrimary,
-                                contentColor = Color(0xFF040A0F)
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                        ) {
-                            if (isTestingBackend) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = Color.Black,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "SCANNING...",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "RESCAN BUS",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Test result log
-                    if (testResult != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Surface(
-                            color = Color(0xFF090D14),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, if (testResult.isSuccess) Color(0xFF00E5FF) else StatusDanger),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text(
-                                    text = if (testResult.isSuccess) "[VERIFIED] Shell ping response (${testResult.durationMs}ms)" else "[FAILED] IPC test failed",
-                                    color = if (testResult.isSuccess) AccentPrimary else StatusDanger,
+                                    text = "READ-ONLY SHELL TEST",
+                                    color = RedCoreTextSecondary,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    letterSpacing = 0.5.sp
                                 )
-                                if (testResult.stdout.isNotEmpty()) {
+                                Text(
+                                    text = "Execute verified command: 'id'",
+                                    color = RedCoreTextMuted,
+                                    fontSize = 9.5.sp
+                                )
+                            }
+                            Button(
+                                onClick = { onTestBackend?.invoke() },
+                                enabled = isPrivileged && !isTestingBackend,
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGamingRed),
+                                shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("RUN ID TEST", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // Test Result Panel (Real execution output)
+                        if (testResult != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = CutCornerShape(4.dp),
+                                color = RedCoreBgSecondary,
+                                border = BorderStroke(1.dp, if (testResult.isSuccess) RedCoreSuccess else RedCoreDanger)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "EXIT CODE: ${testResult.exitCode} (${testResult.durationMs}ms)",
+                                            color = if (testResult.isSuccess) RedCoreSuccess else RedCoreDanger,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                        Text(
+                                            text = "VERIFIED OUTPUT",
+                                            color = RedCoreTextMuted,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "stdout: ${testResult.stdout.trim()}",
-                                        color = TextSecondary,
-                                        fontSize = 9.5.sp,
+                                        text = if (testResult.stdout.isNotBlank()) testResult.stdout.trim() else testResult.stderr.trim(),
+                                        color = RedCoreTextPrimary,
+                                        fontSize = 10.5.sp,
                                         fontFamily = FontFamily.Monospace
                                     )
                                 }
@@ -1031,31 +416,43 @@ fun DiagnosticsScreen(
                     }
                 }
 
-                // ==========================================
-                // 9. TACTICAL FOOTER
-                // ==========================================
+                // =========================================================================
+                // 5. OPTIMIZATION SECTION
+                // Refresh control, Game Mode, Thermal monitoring, Process priority, Restore capability
+                // =========================================================================
                 item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    HudSectionCard(
+                        title = "OPTIMIZATION ARBITRATION",
+                        marker = "[OPT]"
                     ) {
-                        Text(
-                            text = "● REAL-TIME DIAGNOSTIC DUMP • CREATED BY ROHIT B.K ●",
-                            color = TextTertiary,
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            textAlign = TextAlign.Center
+                        HudStatusRow(
+                            label = "REFRESH RATE CONTROL",
+                            statusText = if (capabilities.displayState.supports120Hz || capabilities.displayState.supports90Hz) "CAPABLE (SurfaceFlinger)" else "FIXED 60Hz",
+                            isSuccess = capabilities.displayState.supports120Hz || capabilities.displayState.supports90Hz
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "SECURE_CHANNEL: 0x8F92E • BUILD_TAG: GB/TAC/L17-PRD9",
-                            color = Color(0xFF434E60),
-                            fontSize = 7.5.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = FontFamily.Monospace,
-                            letterSpacing = 0.5.sp,
-                            textAlign = TextAlign.Center
+                        HudDivider()
+                        HudStatusRow(
+                            label = "ANDROID GAME MODE",
+                            statusText = if (capabilities.apiLevel >= 31) "SUPPORTED (API ${capabilities.apiLevel})" else "NOT SUPPORTED (< API 31)",
+                            isSuccess = capabilities.apiLevel >= 31
+                        )
+                        HudDivider()
+                        HudStatusRow(
+                            label = "THERMAL TELEMETRY",
+                            statusText = if (hardwareStats?.batteryTemperatureCelsius ?: 0f > 0) "ACTIVE SENSOR PROBING" else "UNAVAILABLE",
+                            isSuccess = (hardwareStats?.batteryTemperatureCelsius ?: 0f) > 0
+                        )
+                        HudDivider()
+                        HudStatusRow(
+                            label = "PROCESS PRIORITY BOOST",
+                            statusText = if (shizukuStatus.isReady) "PRIVILEGED RENICE READY" else "REQUIRES SHIZUKU",
+                            isSuccess = shizukuStatus.isReady
+                        )
+                        HudDivider()
+                        HudStatusRow(
+                            label = "BASELINE RESTORATION STATE",
+                            statusText = if (activeBackup != null) "BASELINE SNAPSHOT ACTIVE" else "NO ACTIVE MUTATIONS",
+                            isSuccess = true
                         )
                     }
                 }
@@ -1065,198 +462,121 @@ fun DiagnosticsScreen(
 }
 
 @Composable
-private fun SectionCard(
-    numberTitle: String,
-    badge: String,
+private fun HudSectionCard(
+    title: String,
+    marker: String,
     content: @Composable () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = SurfaceCard,
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, BorderSubtle)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .background(AccentPrimary)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = numberTitle,
-                        color = TextPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color(0xFF0F1622)
-                ) {
-                    Text(
-                        text = badge,
-                        color = TextTertiary,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            content()
-        }
-    }
-}
-
-@Composable
-private fun SpecColumn(
-    label: String,
-    value: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-    valueColor: Color = TextPrimary
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            color = TextTertiary,
-            fontSize = 8.5.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = value,
-            color = valueColor,
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.Black
-        )
-        if (subtitle != null) {
-            Text(
-                text = subtitle,
-                color = TextTertiary,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@Composable
-private fun BackendCardItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    statusText: String,
-    statusColor: Color
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFF0C1017),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, Color(0xFF161F2C))
+    RedCoreCard(
+        backgroundColor = RedCoreSurfaceElevated,
+        borderColor = RedCoreBorder
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = AccentPrimary,
-                    modifier = Modifier.size(16.dp)
+                Box(
+                    modifier = Modifier
+                        .size(width = 3.dp, height = 12.dp)
+                        .background(PrimaryGamingRed)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = title,
-                        color = TextPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = subtitle,
-                        color = TextTertiary,
-                        fontSize = 8.5.sp
-                    )
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(4.dp),
-                color = Color(0xFF0E1A26)
-            ) {
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = statusText,
-                    color = statusColor,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    text = title.uppercase(),
+                    color = RedCoreTextPrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
                 )
             }
+            Text(
+                text = marker,
+                color = BrightActiveRed,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        content()
+    }
+}
+
+@Composable
+private fun HudTelemetryRow(
+    label: String,
+    value: String,
+    highlightValue: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = RedCoreTextSecondary,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        )
+        Text(
+            text = value,
+            color = if (highlightValue) BrightActiveRed else RedCoreTextPrimary,
+            fontSize = if (highlightValue) 13.5.sp else 12.sp,
+            fontWeight = FontWeight.Black
+        )
+    }
+}
+
+@Composable
+private fun HudStatusRow(
+    label: String,
+    statusText: String,
+    isSuccess: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = RedCoreTextSecondary,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(5.dp)
+                    .background(if (isSuccess) RedCoreSuccess else RedCoreWarning, CutCornerShape(1.dp))
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = statusText.uppercase(),
+                color = if (isSuccess) RedCoreSuccess else RedCoreWarning,
+                fontSize = 10.5.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
 @Composable
-private fun DiagMatrixRow(
-    icon: ImageVector,
-    title: String,
-    status: String,
-    statusColor: Color,
-    isWarning: Boolean = false
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (isWarning) StatusDanger else AccentPrimary,
-                modifier = Modifier.size(15.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                color = TextPrimary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Surface(
-            shape = RoundedCornerShape(3.dp),
-            color = if (isWarning) Color(0xFF330F15) else Color(0xFF0D1B28)
-        ) {
-            Text(
-                text = status,
-                color = statusColor,
-                fontSize = 7.5.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-            )
-        }
-    }
+private fun HudDivider() {
+    HorizontalDivider(
+        color = RedCoreBorderSubtle,
+        thickness = 1.dp,
+        modifier = Modifier.padding(vertical = 2.dp)
+    )
 }

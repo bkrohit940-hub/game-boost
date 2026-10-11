@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -35,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,20 +44,27 @@ import androidx.compose.ui.unit.sp
 import com.gameboost.optimizer.models.ShizukuState
 import com.gameboost.optimizer.models.ShizukuStatus
 import com.gameboost.optimizer.system.ShizukuManager
-import com.gameboost.optimizer.theme.AccentPrimary
-import com.gameboost.optimizer.theme.BorderSubtle
-import com.gameboost.optimizer.theme.DarkBg
-import com.gameboost.optimizer.theme.StatusDanger
-import com.gameboost.optimizer.theme.StatusReady
-import com.gameboost.optimizer.theme.StatusWarning
-import com.gameboost.optimizer.theme.SurfaceCard
-import com.gameboost.optimizer.theme.SurfaceElevated
-import com.gameboost.optimizer.theme.TextPrimary
-import com.gameboost.optimizer.theme.TextSecondary
-import com.gameboost.optimizer.theme.TextTertiary
+import com.gameboost.optimizer.theme.BrightActiveRed
+import com.gameboost.optimizer.theme.DeepRed
+import com.gameboost.optimizer.theme.PrimaryGamingRed
+import com.gameboost.optimizer.theme.RedCoreAngularShape
+import com.gameboost.optimizer.theme.RedCoreBgPrimary
+import com.gameboost.optimizer.theme.RedCoreBgSecondary
+import com.gameboost.optimizer.theme.RedCoreBorder
+import com.gameboost.optimizer.theme.RedCoreBorderActive
+import com.gameboost.optimizer.theme.RedCoreBorderSubtle
+import com.gameboost.optimizer.theme.RedCoreDarkCrimson
+import com.gameboost.optimizer.theme.RedCoreSuccess
+import com.gameboost.optimizer.theme.RedCoreSuccessContainer
+import com.gameboost.optimizer.theme.RedCoreSurfaceCard
+import com.gameboost.optimizer.theme.RedCoreSurfaceElevated
+import com.gameboost.optimizer.theme.RedCoreTextMuted
+import com.gameboost.optimizer.theme.RedCoreTextPrimary
+import com.gameboost.optimizer.theme.RedCoreTextSecondary
+import com.gameboost.optimizer.theme.RedCoreWarning
+import com.gameboost.optimizer.theme.RedCoreWarningContainer
 import com.gameboost.optimizer.ui.components.BadgeState
-import com.gameboost.optimizer.ui.components.GameBoostLogo
-import com.gameboost.optimizer.ui.components.GlassCard
+import com.gameboost.optimizer.ui.components.RedCoreCard
 import com.gameboost.optimizer.ui.components.StatusBadge
 
 @Composable
@@ -71,15 +80,15 @@ fun ShizukuSetupScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = DarkBg
+        color = RedCoreBgPrimary
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Navigation Top Bar
             Row(
@@ -87,40 +96,39 @@ fun ShizukuSetupScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = TextPrimary
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = RedCoreTextPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "SHIZUKU PRIVILEGED SETUP",
+                        color = RedCoreTextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
                     )
                 }
-
-                Text(
-                    text = "SHIZUKU SETUP",
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
 
                 IconButton(onClick = onRefreshStatus) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh",
-                        tint = AccentPrimary
+                        tint = BrightActiveRed
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Current State Card
-            GlassCard(
-                backgroundColor = SurfaceElevated,
-                border = BorderStroke(
-                    1.dp,
-                    if (status.isReady) StatusReady else StatusWarning.copy(alpha = 0.5f)
-                )
+            RedCoreCard(
+                backgroundColor = RedCoreSurfaceElevated,
+                borderColor = if (status.isReady) RedCoreSuccess else RedCoreBorderActive
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -130,16 +138,16 @@ fun ShizukuSetupScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = status.title,
-                            color = if (status.isReady) StatusReady else StatusWarning,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
+                            color = if (status.isReady) RedCoreSuccess else BrightActiveRed,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = status.summaryText,
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                            color = RedCoreTextSecondary,
+                            fontSize = 11.5.sp
                         )
                     }
 
@@ -149,28 +157,31 @@ fun ShizukuSetupScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = status.actionPrompt,
-                    color = TextPrimary,
-                    fontSize = 12.sp,
+                    color = RedCoreTextPrimary,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Step-by-Step Instructions based on active state
-            GlassCard(backgroundColor = SurfaceElevated) {
+            RedCoreCard(
+                backgroundColor = RedCoreSurfaceElevated,
+                borderColor = RedCoreBorder
+            ) {
                 Text(
-                    text = "SETUP GUIDE",
-                    color = TextTertiary,
-                    fontSize = 11.sp,
+                    text = "SETUP INSTRUCTIONS",
+                    color = RedCoreTextSecondary,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    letterSpacing = 0.8.sp
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 SetupStepItem(
                     stepNumber = "1",
@@ -188,13 +199,13 @@ fun ShizukuSetupScreen(
 
                 SetupStepItem(
                     stepNumber = "3",
-                    title = "Authorize Game Boost",
-                    description = "Grant Game Boost permission to adjust display modes and legitimate performance settings.",
+                    title = "Authorize GameBoost",
+                    description = "Grant GameBoost permission to adjust display modes and legitimate performance settings.",
                     isCompleted = status.isAuthorized
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Action Buttons
             when (status.state) {
@@ -204,12 +215,12 @@ fun ShizukuSetupScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusReady, contentColor = DarkBg),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = RedCoreSuccess, contentColor = Color.Black),
+                        shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
                     ) {
                         Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("CONTINUE TO GAME BOOST", fontWeight = FontWeight.Bold)
+                        Text("CONTINUE TO COMMAND CENTER", fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -222,8 +233,8 @@ fun ShizukuSetupScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGamingRed, contentColor = Color.White),
+                        shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
                     ) {
                         Icon(imageVector = Icons.Default.Security, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
@@ -246,8 +257,8 @@ fun ShizukuSetupScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGamingRed, contentColor = Color.White),
+                        shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
                     ) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
@@ -267,8 +278,8 @@ fun ShizukuSetupScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGamingRed, contentColor = Color.White),
+                        shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
                     ) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
@@ -284,8 +295,9 @@ fun ShizukuSetupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                shape = RoundedCornerShape(10.dp)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = RedCoreTextSecondary),
+                shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp),
+                border = BorderStroke(1.dp, RedCoreBorder)
             ) {
                 Text("CONTINUE ANYWAY (LIMITED MODE)", fontSize = 11.sp)
             }
@@ -305,49 +317,49 @@ private fun SetupStepItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 5.dp),
         verticalAlignment = Alignment.Top
     ) {
         Surface(
-            modifier = Modifier.size(24.dp),
-            shape = RoundedCornerShape(6.dp),
-            color = if (isCompleted) StatusReady.copy(alpha = 0.15f) else SurfaceCard,
-            border = BorderStroke(1.dp, if (isCompleted) StatusReady else BorderSubtle)
+            modifier = Modifier.size(22.dp),
+            shape = CutCornerShape(topStart = 3.dp, bottomEnd = 3.dp),
+            color = if (isCompleted) RedCoreSuccessContainer else RedCoreSurfaceCard,
+            border = BorderStroke(1.dp, if (isCompleted) RedCoreSuccess else RedCoreBorder)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (isCompleted) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = StatusReady,
-                        modifier = Modifier.size(14.dp)
+                        tint = RedCoreSuccess,
+                        modifier = Modifier.size(13.dp)
                     )
                 } else {
                     Text(
                         text = stepNumber,
-                        color = TextSecondary,
-                        fontSize = 11.sp,
+                        color = RedCoreTextSecondary,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Column {
             Text(
                 text = title,
-                color = if (isCompleted) TextPrimary else TextSecondary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
+                color = if (isCompleted) RedCoreTextPrimary else RedCoreTextSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                color = TextTertiary,
-                fontSize = 11.sp,
-                lineHeight = 15.sp
+                color = RedCoreTextSecondary,
+                fontSize = 10.5.sp,
+                lineHeight = 14.sp
             )
         }
     }

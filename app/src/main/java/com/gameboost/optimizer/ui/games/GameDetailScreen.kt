@@ -1,7 +1,9 @@
 package com.gameboost.optimizer.ui.games
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,18 +45,25 @@ import com.gameboost.optimizer.models.GameProfile
 import com.gameboost.optimizer.models.OptimizationProfile
 import com.gameboost.optimizer.models.OptimizationResult
 import com.gameboost.optimizer.models.PerformanceMode
-import com.gameboost.optimizer.theme.AccentPrimary
-import com.gameboost.optimizer.theme.BorderSubtle
-import com.gameboost.optimizer.theme.DarkBg
-import com.gameboost.optimizer.theme.StatusReady
-import com.gameboost.optimizer.theme.SurfaceElevated
-import com.gameboost.optimizer.theme.TextPrimary
-import com.gameboost.optimizer.theme.TextSecondary
-import com.gameboost.optimizer.theme.TextTertiary
+import com.gameboost.optimizer.theme.BrightActiveRed
+import com.gameboost.optimizer.theme.PrimaryGamingRed
+import com.gameboost.optimizer.theme.RedCoreAngularShape
+import com.gameboost.optimizer.theme.RedCoreBgPrimary
+import com.gameboost.optimizer.theme.RedCoreBgSecondary
+import com.gameboost.optimizer.theme.RedCoreBorder
+import com.gameboost.optimizer.theme.RedCoreBorderActive
+import com.gameboost.optimizer.theme.RedCoreBorderSubtle
+import com.gameboost.optimizer.theme.RedCoreSuccess
+import com.gameboost.optimizer.theme.RedCoreSurfaceElevated
+import com.gameboost.optimizer.theme.RedCoreTextMuted
+import com.gameboost.optimizer.theme.RedCoreTextPrimary
+import com.gameboost.optimizer.theme.RedCoreTextSecondary
+import com.gameboost.optimizer.theme.RedCoreWarning
 import com.gameboost.optimizer.ui.components.BadgeState
 import com.gameboost.optimizer.ui.components.GameIconView
-import com.gameboost.optimizer.ui.components.GlassCard
 import com.gameboost.optimizer.ui.components.PerformanceModeSelector
+import com.gameboost.optimizer.ui.components.PrimaryBoostButton
+import com.gameboost.optimizer.ui.components.RedCoreCard
 import com.gameboost.optimizer.ui.components.SectionHeader
 import com.gameboost.optimizer.ui.components.StatusBadge
 import com.gameboost.optimizer.ui.components.ThermalRiskDialog
@@ -90,15 +100,15 @@ fun GameDetailScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = DarkBg
+        color = RedCoreBgPrimary
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(14.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
+            // Header with Back Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -107,28 +117,41 @@ fun GameDetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = TextPrimary
+                        tint = RedCoreTextPrimary
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = game.displayName.uppercase(),
-                    color = TextPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column {
+                    Text(
+                        text = game.displayName.uppercase(),
+                        color = RedCoreTextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = "HARDWARE PROFILE CONFIGURATION",
+                        color = RedCoreTextSecondary,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Game Profile Card
-            GlassCard(backgroundColor = SurfaceElevated) {
+            // Game Profile Card with Red Core Angular Shape
+            RedCoreCard(
+                backgroundColor = RedCoreSurfaceElevated,
+                borderColor = if (isOptimized) RedCoreSuccess else RedCoreBorderActive
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     GameIconView(
                         packageName = game.activePackageName,
                         isInstalled = game.isInstalled,
-                        sizeDp = 56.dp
+                        sizeDp = 56.dp,
+                        isActive = isOptimized
                     )
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -139,9 +162,9 @@ fun GameDetailScreen(
                         ) {
                             Text(
                                 text = game.displayName,
-                                color = TextPrimary,
+                                color = RedCoreTextPrimary,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Black
                             )
                             val (badgeText, badgeState) = when {
                                 !game.isInstalled -> Pair("NOT INSTALLED", BadgeState.NEUTRAL)
@@ -154,14 +177,14 @@ fun GameDetailScreen(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "${game.region} • ${game.activePackageName}",
-                            color = TextTertiary,
+                            color = RedCoreTextSecondary,
                             fontSize = 11.sp
                         )
                         if (game.appVersion != null) {
                             Text(
                                 text = "Installed version: ${game.appVersion}",
-                                color = TextSecondary,
-                                fontSize = 11.sp
+                                color = RedCoreTextMuted,
+                                fontSize = 10.5.sp
                             )
                         }
                     }
@@ -172,7 +195,7 @@ fun GameDetailScreen(
 
             // Mode Selector
             SectionHeader(
-                title = "Performance Mode",
+                title = "PERFORMANCE MODE",
                 subtitle = "Select desired optimization intensity"
             )
             PerformanceModeSelector(
@@ -183,8 +206,11 @@ fun GameDetailScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Supported Capabilities Matrix
-            SectionHeader(title = "Verified Game Capabilities")
-            GlassCard(backgroundColor = SurfaceElevated) {
+            SectionHeader(
+                title = "VERIFIED CAPABILITIES",
+                subtitle = "Hardware features mapped to this title"
+            )
+            RedCoreCard(backgroundColor = RedCoreSurfaceElevated) {
                 game.supportedFeatures.forEach { feature ->
                     Row(
                         modifier = Modifier
@@ -195,24 +221,25 @@ fun GameDetailScreen(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = StatusReady,
+                            tint = RedCoreSuccess,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = feature,
-                            color = TextPrimary,
-                            fontSize = 12.sp
+                            color = RedCoreTextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Action Buttons
             if (game.isInstalled) {
-                Button(
+                PrimaryBoostButton(
                     onClick = {
                         if (selectedMode == PerformanceMode.THERMAL_OVERRIDE) {
                             showThermalDialog = true
@@ -221,25 +248,10 @@ fun GameDetailScreen(
                             onLaunch?.invoke()
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBg),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "BOOST & PLAY",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 14.sp,
-                        letterSpacing = 0.5.sp
-                    )
-                }
+                    text = "BOOST & PLAY",
+                    subtext = "APPLY PROFILE & LAUNCH GAME",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -257,11 +269,12 @@ fun GameDetailScreen(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                        shape = RoundedCornerShape(10.dp)
+                            .height(46.dp),
+                        shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp),
+                        border = BorderStroke(1.dp, RedCoreBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RedCoreTextPrimary)
                     ) {
-                        Text("BOOST ONLY", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("BOOST ONLY", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
 
                     if (onLaunch != null) {
@@ -269,17 +282,18 @@ fun GameDetailScreen(
                             onClick = onLaunch,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(48.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                            shape = RoundedCornerShape(10.dp)
+                                .height(46.dp),
+                            shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp),
+                            border = BorderStroke(1.dp, RedCoreBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RedCoreTextSecondary)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("PLAY ONLY", fontSize = 12.sp)
+                            Text("PLAY ONLY", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -289,8 +303,9 @@ fun GameDetailScreen(
                     OutlinedButton(
                         onClick = onRestore,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp),
+                        border = BorderStroke(1.dp, RedCoreWarning.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RedCoreWarning)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Restore,
@@ -298,19 +313,19 @@ fun GameDetailScreen(
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("RESTORE DEFAULT SETTINGS", fontSize = 12.sp)
+                        Text("RESTORE DEFAULT SETTINGS", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             } else {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    color = SurfaceElevated,
-                    border = BorderStroke(1.dp, BorderSubtle)
+                    shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp),
+                    color = RedCoreSurfaceElevated,
+                    border = BorderStroke(1.dp, RedCoreBorder)
                 ) {
                     Text(
                         text = "This game package is not installed on your device. Install it from the official app store to enable launch and boost.",
-                        color = TextSecondary,
+                        color = RedCoreTextSecondary,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(14.dp)
                     )
